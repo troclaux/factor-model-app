@@ -1,8 +1,9 @@
 # Buddy
 
-Android app to plan how much to invest each month.
+Android app to plan how much to invest each month and where to put it. Two tabs:
 
 - **Budget**: loads your recurring expenses, lets you adjust amounts, and instantly shows how much you have free to spend.
+- **Portfolio**: CAPM / mean-variance analysis (port of the `capm` CLI). Finds the tangency portfolio for your tickers and shows where your own portfolio sits.
 
 ## Budget features
 
@@ -11,6 +12,24 @@ Android app to plan how much to invest each month.
 - Expenses grouped by category (Housing, Food, Health, etc.) with collapsible sections
 - Separate sections for Debts and Taxes
 - Shows "FREE TO SPEND" (green) or "DEFICIT" (red)
+
+## Portfolio features
+
+- Editable ticker list (B3 tickers need `.SA`) and market benchmark (default `^BVSP`)
+- Risk-free rate, lookback (days/weeks/months/years), daily or monthly returns, short selling on/off
+- Prices from Yahoo Finance (adjusted closes, window ends on the last trading day of the previous month)
+- Tangency portfolio: weights, expected return, volatility, Sharpe ratio, market beta and Bloomberg-adjusted beta
+- Mean-variance diagram: efficient frontier, CML, assets, tangency point, your portfolio and a hypothetical one
+- Your portfolio and a hypothetical one, entered as share counts or weights (or pasted in the CLI's `TICKER VALUE` file format)
+- CML allocation for risk aversion A (1, 2, 5 and your own) and capital split into whole shares
+- Per-asset betas (vs tangency and vs market) and a correlation heatmap
+- Every setting is saved on the device
+
+The math lives in `app/src/main/java/com/buddy/budget/portfolio/model/PortfolioMath.kt` and is unit-tested against the Python CLI:
+
+```bash
+./gradlew testDebugUnitTest
+```
 
 ## Prerequisites
 
