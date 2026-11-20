@@ -1,0 +1,23 @@
+{
+  "fatura_debit_day": 10,
+  "income": 5000,
+  "expenses": [
+    { "name": "Aluguel",        "amount": 1200, "day": 5,    "category": "housing",       "is_fatura": false },
+    { "name": "Condomínio",     "amount": 400,  "day": 5,    "category": "housing",       "is_fatura": false },
+    { "name": "Energia",        "amount": 120,  "day": 15,   "category": "housing",       "is_fatura": false },
+    { "name": "Internet",       "amount": 100,  "day": 10,   "category": "utilities",     "is_fatura": false },
+    { "name": "Celular",        "amount": 50,   "day": null, "category": "utilities",     "is_fatura": true  },
+    { "name": "Supermercado",   "amount": 800,  "day": null, "category": "food",          "is_fatura": true  },
+    { "name": "Restaurantes",   "amount": 200,  "day": null, "category": "food",          "is_fatura": true  },
+    { "name": "Transporte",     "amount": 200,  "day": null, "category": "transport",     "is_fatura": false },
+    { "name": "Farmácia",       "amount": 50,   "day": null, "category": "health",        "is_fatura": true  },
+    { "name": "Academia",       "amount": 100,  "day": null, "category": "health",        "is_fatura": true  },
+    { "name": "Entretenimento", "amount": 100,  "day": null, "category": "entertainment", "is_fatura": true  }
+  ],
+  "taxes": [
+    { "name": "Imposto de Renda", "amount": 300, "day": null, "is_fatura": false }
+  ],
+  "debts": [
+    { "name": "Empréstimo", "amount": 500, "day": 1, "is_fatura": false }
+  ]
+}
