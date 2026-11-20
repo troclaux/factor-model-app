@@ -18,12 +18,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.QueryStats
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -40,6 +44,7 @@ import com.buddy.budget.portfolio.PortfolioViewModel
 import com.buddy.budget.portfolio.model.AnalysisResult
 import com.buddy.budget.portfolio.model.PortfolioMath
 import com.buddy.budget.portfolio.model.PortfolioSummary
+import com.buddy.budget.portfolio.model.Report
 import com.buddy.budget.portfolio.model.parseNumber
 import com.buddy.budget.portfolio.model.percent
 import kotlin.math.abs
@@ -69,6 +74,7 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { ReportActions(viewModel, result) }
         if (result.warnings.isNotEmpty()) item { WarningsCard(result.warnings) }
         item { SummaryCard(result) }
         item {
@@ -146,6 +152,29 @@ private fun SummaryCard(result: AnalysisResult) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun ReportActions(viewModel: PortfolioViewModel, result: AnalysisResult) {
+    val context = LocalContext.current
+    fun report(): String {
+        val settings = viewModel.settings
+        return Report.text(
+            result,
+            riskAversion = parseNumber(settings.riskAversion)?.takeIf { it > 0 },
+            capital = parseNumber(settings.capital)?.takeIf { it > 0 },
+        )
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { copyToClipboard(context, report()) }, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(18.dp))
+            Text("Copy report", Modifier.padding(start = 8.dp))
+        }
+        OutlinedButton(onClick = { shareText(context, report(), "output.txt") }, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
+            Text("Share .txt", Modifier.padding(start = 8.dp))
         }
     }
 }
