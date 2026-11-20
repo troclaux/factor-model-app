@@ -151,6 +151,12 @@ object PortfolioMath {
         return PortfolioStats(expectedReturn, volatility, (expectedReturn - riskFreeRate) / volatility)
     }
 
+    /** (μᵢ − rf) / Cov(rᵢ, r_p) per asset; constant across assets exactly when the weights are the tangency portfolio. */
+    fun tangencyRatios(weights: Vector, expected: Vector, cov: Matrix, riskFreeRate: Double): Vector {
+        val covWithPortfolio = multiply(cov, weights)
+        return DoubleArray(weights.size) { (expected[it] - riskFreeRate) / covWithPortfolio[it] }
+    }
+
     /** Expected return of the global minimum-variance portfolio (shorts allowed). */
     fun minVarianceReturn(expected: Vector, cov: Matrix): Double {
         val raw = multiply(invert(cov), DoubleArray(expected.size) { 1.0 })

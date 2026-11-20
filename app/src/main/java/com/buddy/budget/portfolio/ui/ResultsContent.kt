@@ -131,6 +131,22 @@ private fun SummaryCard(result: AnalysisResult) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val ratios = result.tangencyRatios
+        if (ratios != null) {
+            val passed = result.tangencyVerified == true
+            Text(
+                "Verification: ${if (passed) "PASS" else "FAIL"} · (μᵢ − rf) / Cov(rᵢ, r_T) is " +
+                    (if (passed) "the same" else "not the same") + " for every asset (${"%.6f".format(ratios.min())} to ${"%.6f".format(ratios.max())})",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (passed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+            )
+        } else {
+            Text(
+                "Verification skipped: it only applies when short selling is allowed.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

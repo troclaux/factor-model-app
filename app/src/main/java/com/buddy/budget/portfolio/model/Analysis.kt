@@ -32,6 +32,9 @@ data class AnalysisResult(
     val frontier: Frontier,
     val correlation: Matrix,
     val warnings: List<String>,
+    /** (μᵢ − rf) / Cov(rᵢ, r_T) per asset; null when shorts are forbidden (the check only holds unconstrained). */
+    val tangencyRatios: Vector?,
+    val tangencyVerified: Boolean?,
 )
 
 /** Mirrors the CLI pipeline: returns → estimates → tangency → betas → custom portfolios → frontier. */
@@ -102,6 +105,8 @@ object Analysis {
         tickers.forEachIndexed { index, ticker ->
             if (tangencyWeights[index] < -1e-9) warnings += "$ticker has a short position (${tangencyWeights[index].percent()})."
         }
+        val tangencyRatios = if (allowShort) PortfolioMath.tangencyRatios(tangencyWeights, expected, cov, riskFreeRate) else null
+
         if (assetReturns.size < 60) {
             warnings += "Small sample (${assetReturns.size} observations). Estimates may be unreliable."
         }
@@ -128,6 +133,8 @@ object Analysis {
             frontier = PortfolioMath.frontier(expected, cov, allowShort),
             correlation = PortfolioMath.correlationMatrix(assetReturns),
             warnings = warnings,
+            tangencyRatios = tangencyRatios,
+            tangencyVerified = tangencyRatios?.let { it.max() - it.min() < 1e-8 },
         )
     }
 }

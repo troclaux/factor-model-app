@@ -24,6 +24,7 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 - CML allocation for risk aversion A (1, 2, 5 and your own) and capital split into whole shares
 - Per-asset betas (vs tangency and vs market) and a correlation heatmap
 - Risk-free rate typed in or fetched from a yield ticker (e.g. `^IRX`, `^TNX`)
+- Tangency verification: (μᵢ − rf) / Cov(rᵢ, r_T) must match across assets (when shorts are allowed)
 - Every setting is saved on the device
 
 The math lives in `app/src/main/java/com/buddy/budget/portfolio/model/PortfolioMath.kt` and is unit-tested against the Python CLI:

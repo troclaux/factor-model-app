@@ -41,6 +41,19 @@ class PortfolioMathTest {
     }
 
     @Test
+    fun tangencyRatiosAreConstantOnlyForTangency() {
+        val weights = PortfolioMath.tangencyWeights(expected, cov, riskFreeRate)
+        val stats = PortfolioMath.statistics(weights, expected, cov, riskFreeRate)
+        val ratios = PortfolioMath.tangencyRatios(weights, expected, cov, riskFreeRate)
+        // For the tangency portfolio every ratio equals (E[r_T] − rf) / σ_T².
+        val reference = (stats.expectedReturn - riskFreeRate) / (stats.volatility * stats.volatility)
+        ratios.forEach { assertEquals(reference, it, 1e-8) }
+        val equalWeights = DoubleArray(4) { 0.25 }
+        val otherRatios = PortfolioMath.tangencyRatios(equalWeights, expected, cov, riskFreeRate)
+        assertTrue(otherRatios.max() - otherRatios.min() > 1e-8)
+    }
+
+    @Test
     fun longOnlyTangencyMatchesScipyAndIsNotBeaten() {
         val weights = PortfolioMath.tangencyWeightsLongOnly(expected, cov, riskFreeRate)
         // Exact optimum: the shorts-allowed tangency of the two assets left in the solution (A, B).
