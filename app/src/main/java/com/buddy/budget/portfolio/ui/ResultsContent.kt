@@ -127,7 +127,7 @@ private fun SummaryCard(result: AnalysisResult) {
         }
         Text(
             "${result.startDate} → ${result.endDate} · ${result.observations} ${result.frequency.label.lowercase()} returns · " +
-                "rf ${result.riskFreeRate.percent()} · shorts ${if (result.allowShort) "allowed" else "forbidden"}",
+                "rf ${result.riskFreeRate.percent()} (${result.riskFreeSource}) · shorts ${if (result.allowShort) "allowed" else "forbidden"}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -371,6 +371,7 @@ private fun DataCard(result: AnalysisResult) {
         TableRow(listOf("Interval", "${result.startDate} → ${result.endDate}"), firstWeight = 1f)
         TableRow(listOf("Frequency", "${result.frequency.label} (${result.frequency.periodsPerYear}/year)"), firstWeight = 1f)
         TableRow(listOf("Observations", "${result.observations} returns"), firstWeight = 1f)
+        TableRow(listOf("Risk-free rate", "${result.riskFreeRate.percent()} (${result.riskFreeSource})"), firstWeight = 1f)
         TableRow(listOf("Market proxy", result.marketProxy ?: "none"), firstWeight = 1f)
         Text(
             "Mean-variance assumes Gaussian, i.i.d. returns and that past returns persist. Thin trading distorts " +

@@ -197,9 +197,18 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                     onValueChange = { value -> viewModel.update { it.copy(riskFreePercent = value) } },
                     label = { Text("Risk-free rate (annual)") },
                     suffix = { Text("%") },
-                    isError = parseNumber(settings.riskFreePercent) == null,
+                    isError = settings.riskFreeProxy.isBlank() && parseNumber(settings.riskFreePercent) == null,
+                    enabled = settings.riskFreeProxy.isBlank(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = settings.riskFreeProxy,
+                    onValueChange = { value -> viewModel.update { it.copy(riskFreeProxy = value) } },
+                    label = { Text("Risk-free proxy") },
+                    supportingText = { Text("Yield ticker, e.g. ^IRX (13-week T-bill) or ^TNX (10-year). Overrides the rate above.") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(

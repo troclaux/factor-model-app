@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -34,6 +35,15 @@ object YahooFinance {
             tickers.map { ticker -> async(Dispatchers.IO) { ticker to fetchSeries(ticker, start, end, monthly) } }.awaitAll()
         }.toMap()
         return align(tickers, series)
+    }
+
+    /**
+     * Latest yield of a Yahoo yield ticker (e.g. ^IRX, ^TNX) as a decimal, from the 30 days before
+     * the first of the current month. Yahoo quotes these in percent (4.25 = 4.25%).
+     */
+    suspend fun fetchRiskFreeRate(ticker: String): Double = withContext(Dispatchers.IO) {
+        val end = LocalDate.now().withDayOfMonth(1)
+        fetchSeries(ticker, end.minusDays(30), end, monthly = false).values.last() / 100.0
     }
 
     private fun fetchSeries(ticker: String, start: LocalDate, end: LocalDate, monthly: Boolean): Map<LocalDate, Double> {

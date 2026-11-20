@@ -13,6 +13,7 @@ data class PortfolioSummary(
 data class AnalysisResult(
     val tickers: List<String>,
     val riskFreeRate: Double,
+    val riskFreeSource: String,
     val allowShort: Boolean,
     val marketProxy: String?,
     val frequency: Frequency,
@@ -42,6 +43,7 @@ object Analysis {
         tickers: List<String>,
         marketProxy: String?,
         riskFreeRate: Double,
+        riskFreeSource: String,
         allowShort: Boolean,
         frequency: Frequency,
         current: PortfolioInput,
@@ -107,6 +109,7 @@ object Analysis {
         return AnalysisResult(
             tickers = tickers,
             riskFreeRate = riskFreeRate,
+            riskFreeSource = riskFreeSource,
             allowShort = allowShort,
             marketProxy = marketProxy,
             frequency = frequency,

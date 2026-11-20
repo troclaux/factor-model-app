@@ -57,11 +57,12 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     fun analyze() {
         val current = settings
         val tickers = current.tickers
-        val riskFreeRate = parseNumber(current.riskFreePercent)?.div(100)
+        val riskFreeProxy = current.riskFreeProxy.trim().uppercase().ifEmpty { null }
+        val typedRiskFreeRate = parseNumber(current.riskFreePercent)?.div(100)
         val lookbackDays = parseNumber(current.lookbackAmount)?.times(current.lookbackUnit.days)?.roundToLong()
         val validation = when {
             tickers.size < 2 -> "Add at least two tickers."
-            riskFreeRate == null -> "Enter a valid risk-free rate."
+            riskFreeProxy == null && typedRiskFreeRate == null -> "Enter a valid risk-free rate."
             lookbackDays == null || lookbackDays <= 0 -> "Enter a positive lookback."
             else -> null
         }
@@ -78,6 +79,7 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         error = null
         viewModelScope.launch {
             try {
+                val riskFreeRate = riskFreeProxy?.let { YahooFinance.fetchRiskFreeRate(it) } ?: typedRiskFreeRate!!
                 val prices = cachedPrices.takeIf { cachedKey == key }
                     ?: YahooFinance.fetchPrices(fetchTickers, lookbackDays!!, current.frequency == Frequency.MONTHLY)
                 cachedPrices = prices
@@ -88,7 +90,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                         prices = prices.prices,
                         tickers = tickers,
                         marketProxy = marketProxy,
-                        riskFreeRate = riskFreeRate!!,
+                        riskFreeRate = riskFreeRate,
+                        riskFreeSource = riskFreeProxy?.let { "fetched from $it" } ?: "entered",
                         allowShort = current.allowShort,
                         frequency = current.frequency,
                         current = current.current,

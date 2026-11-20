@@ -31,6 +31,8 @@ data class PortfolioSettings(
     ),
     val marketProxy: String = "^BVSP",
     val riskFreePercent: String = "9",
+    /** Yield ticker (e.g. ^IRX) to fetch the risk-free rate from; overrides riskFreePercent when set. */
+    val riskFreeProxy: String = "",
     val lookbackAmount: String = "53",
     val lookbackUnit: LookbackUnit = LookbackUnit.WEEKS,
     val frequency: Frequency = Frequency.DAILY,
