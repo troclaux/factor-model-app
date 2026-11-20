@@ -35,6 +35,11 @@ data class AnalysisResult(
     /** (μᵢ − rf) / Cov(rᵢ, r_T) per asset; null when shorts are forbidden (the check only holds unconstrained). */
     val tangencyRatios: Vector?,
     val tangencyVerified: Boolean?,
+    /** Intermediate values for cross-checking (the CLI's --verbose). */
+    val priceDates: List<LocalDate>,
+    val assetPrices: Matrix,
+    val assetReturns: Matrix,
+    val covariance: Matrix,
 )
 
 /** Mirrors the CLI pipeline: returns → estimates → tangency → betas → custom portfolios → frontier. */
@@ -135,6 +140,10 @@ object Analysis {
             warnings = warnings,
             tangencyRatios = tangencyRatios,
             tangencyVerified = tangencyRatios?.let { it.max() - it.min() < 1e-8 },
+            priceDates = dates,
+            assetPrices = Array(prices.size) { row -> prices[row].copyOfRange(0, tickers.size) },
+            assetReturns = assetReturns,
+            covariance = cov,
         )
     }
 }

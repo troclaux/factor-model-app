@@ -40,4 +40,13 @@ class ReportTest {
         assertEquals(null, result.tangencyVerified)
         assertTrue(!Report.text(result, null, null).contains("Verification"))
     }
+
+    @Test
+    fun intermediateShowsLastRowsAndCovariance() {
+        val text = Report.intermediate(analyze(allowShort = true))
+        assertTrue(text.contains("Closing prices (last 5 of ${prices.size} rows)"))
+        assertTrue(text.contains("Monthly returns (last 5 of ${prices.size - 1} rows)"))
+        assertTrue(text.contains(dates.last().toString()))
+        assertTrue(text.contains("Annualized covariance matrix"))
+    }
 }

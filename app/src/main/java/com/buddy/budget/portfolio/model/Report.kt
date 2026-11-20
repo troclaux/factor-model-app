@@ -108,6 +108,45 @@ object Report {
         }
     }.trimEnd() + "\n"
 
+    /** Prices, returns, means and covariance behind the estimates (the CLI's --verbose). */
+    fun intermediate(result: AnalysisResult): String = buildString {
+        val width = result.tickers.maxOf { it.length }.coerceAtLeast(10) + 2
+        val periods = result.frequency.periodsPerYear
+        val label = result.frequency.label.lowercase()
+        fun header(first: String) = first.padEnd(width) + result.tickers.joinToString(" ") { it.padStart(width) }
+        fun row(first: String, values: DoubleArray, format: String) =
+            first.padEnd(width) + values.joinToString(" ") { format.format(it).padStart(width) }
+
+        appendLine("Frequency: $label ($periods periods/year)")
+        appendLine("Risk-free rate (annual): ${"%.4f".format(result.riskFreeRate)} (${result.riskFreeRate.percent()})")
+        appendLine("Risk-free rate ($label): ${"%.6f".format(result.riskFreeRate / periods)} (${(result.riskFreeRate / periods).percent(4)})")
+
+        val priceRows = result.assetPrices.size
+        appendLine()
+        appendLine("Closing prices (last 5 of $priceRows rows):")
+        appendLine(header("Date"))
+        for (index in maxOf(0, priceRows - 5) until priceRows) appendLine(row(result.priceDates[index].toString(), result.assetPrices[index], "%.4f"))
+
+        val returnRows = result.assetReturns.size
+        appendLine()
+        appendLine("${result.frequency.label} returns (last 5 of $returnRows rows):")
+        appendLine(header("Date"))
+        // Return row i is the change into price row i + 1.
+        for (index in maxOf(0, returnRows - 5) until returnRows) appendLine(row(result.priceDates[index + 1].toString(), result.assetReturns[index], "%.6f"))
+
+        appendLine()
+        appendLine("Annualized expected returns:")
+        result.tickers.forEachIndexed { index, ticker ->
+            val periodicMean = PortfolioMath.mean(PortfolioMath.column(result.assetReturns, index))
+            appendLine("  ${ticker.padEnd(width)} $label: ${"%.6f".format(periodicMean)}  annualized: ${"%.4f".format(result.expectedReturns[index])}")
+        }
+
+        appendLine()
+        appendLine("Annualized covariance matrix:")
+        appendLine(header(""))
+        result.tickers.forEachIndexed { index, ticker -> appendLine(row(ticker, result.covariance[index], "%.6f")) }
+    }.trimEnd() + "\n"
+
     private fun StringBuilder.appendPortfolioStats(portfolio: PortfolioSummary) {
         appendLine()
         appendLine("Expected Return: ${portfolio.stats.expectedReturn.percent().padStart(8)}")

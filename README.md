@@ -25,6 +25,7 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 - Per-asset betas (vs tangency and vs market) and a correlation heatmap
 - Risk-free rate typed in or fetched from a yield ticker (e.g. `^IRX`, `^TNX`)
 - Tangency verification: (μᵢ − rf) / Cov(rᵢ, r_T) must match across assets (when shorts are allowed)
+- Intermediate values (prices, returns, means, covariance), like the CLI's `--verbose`
 - Copy the full text report or share it as `output.txt`
 - Every setting is saved on the device
 
