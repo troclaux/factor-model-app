@@ -1,5 +1,6 @@
 package com.buddy.budget.portfolio.data
 
+import com.buddy.budget.portfolio.model.Frequency
 import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -11,7 +12,9 @@ import java.net.URL
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneOffset
+import java.time.temporal.IsoFields
 
 /** Aligned adjusted closes: one row per date, one column per ticker. */
 data class PriceTable(
@@ -23,18 +26,31 @@ data class PriceTable(
 object YahooFinance {
 
     /**
-     * Fetches adjusted closes and aligns them by date.
-     *
-     * The window ends on the first day of the current month (exclusive), so the last row is the
-     * last trading day of the previous month, as in the CLI.
+     * Fetches daily adjusted closes in [start, end), aligns them by date and keeps the last close of
+     * each week or month for those frequencies. Resampling daily data (instead of asking Yahoo for
+     * weekly/monthly bars) keeps an unfinished last week or month exact: Yahoo's own bar for it does
+     * not close on the last day before `end`.
      */
-    suspend fun fetchPrices(tickers: List<String>, lookbackDays: Long, monthly: Boolean): PriceTable {
-        val end = LocalDate.now().withDayOfMonth(1)
-        val start = end.minusDays(lookbackDays)
+    suspend fun fetchPrices(tickers: List<String>, start: LocalDate, end: LocalDate, frequency: Frequency): PriceTable {
         val series = coroutineScope {
-            tickers.map { ticker -> async(Dispatchers.IO) { ticker to fetchSeries(ticker, start, end, monthly) } }.awaitAll()
+            tickers.map { ticker -> async(Dispatchers.IO) { ticker to fetchSeries(ticker, start, end) } }.awaitAll()
         }.toMap()
-        return align(tickers, series)
+        val table = resample(align(tickers, series), frequency)
+        if (table.dates.size < 3) {
+            throw IllegalStateException("Not enough overlapping data: got ${table.dates.size} prices. Try a longer period.")
+        }
+        return table
+    }
+
+    /** Keeps the last row of each ISO week or calendar month; daily data is returned unchanged. */
+    fun resample(table: PriceTable, frequency: Frequency): PriceTable {
+        val periodOf: (LocalDate) -> Any = when (frequency) {
+            Frequency.DAILY -> return table
+            Frequency.WEEKLY -> { date -> date.get(IsoFields.WEEK_BASED_YEAR) to date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) }
+            Frequency.MONTHLY -> { date -> YearMonth.from(date) }
+        }
+        val lastRows = table.dates.indices.filter { row -> row == table.dates.lastIndex || periodOf(table.dates[row + 1]) != periodOf(table.dates[row]) }
+        return PriceTable(table.tickers, lastRows.map { table.dates[it] }, Array(lastRows.size) { table.prices[lastRows[it]] })
     }
 
     /**
@@ -43,16 +59,15 @@ object YahooFinance {
      */
     suspend fun fetchRiskFreeRate(ticker: String): Double = withContext(Dispatchers.IO) {
         val end = LocalDate.now().withDayOfMonth(1)
-        fetchSeries(ticker, end.minusDays(30), end, monthly = false).values.last() / 100.0
+        fetchSeries(ticker, end.minusDays(30), end).values.last() / 100.0
     }
 
-    private fun fetchSeries(ticker: String, start: LocalDate, end: LocalDate, monthly: Boolean): Map<LocalDate, Double> {
+    private fun fetchSeries(ticker: String, start: LocalDate, end: LocalDate): Map<LocalDate, Double> {
         val period1 = start.atStartOfDay(ZoneOffset.UTC).toEpochSecond()
         val period2 = end.atStartOfDay(ZoneOffset.UTC).toEpochSecond()
-        val interval = if (monthly) "1mo" else "1d"
         val url = URL(
             "https://query2.finance.yahoo.com/v8/finance/chart/${URLEncoder.encode(ticker, "UTF-8")}" +
-                "?period1=$period1&period2=$period2&interval=$interval&events=div,splits"
+                "?period1=$period1&period2=$period2&interval=1d&events=div,splits"
         )
         val connection = url.openConnection() as HttpURLConnection
         connection.setRequestProperty("User-Agent", "Mozilla/5.0")
@@ -100,9 +115,6 @@ object YahooFinance {
             column
         }
         val keptRows = allDates.indices.filter { row -> filled.all { it[row] != null } }
-        if (keptRows.size < 3) {
-            throw IllegalStateException("Not enough overlapping data: got ${keptRows.size} dates. Try a longer lookback.")
-        }
         return PriceTable(
             tickers = tickers,
             dates = keptRows.map { allDates[it] },

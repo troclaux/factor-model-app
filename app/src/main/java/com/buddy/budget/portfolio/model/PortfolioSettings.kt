@@ -9,6 +9,7 @@ enum class LookbackUnit(val label: String, val days: Double) {
 
 enum class Frequency(val label: String, val periodsPerYear: Int) {
     DAILY("Daily", 252),
+    WEEKLY("Weekly", 52),
     MONTHLY("Monthly", 12),
 }
 

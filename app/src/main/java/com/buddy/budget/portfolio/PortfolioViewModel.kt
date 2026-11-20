@@ -12,7 +12,6 @@ import com.buddy.budget.portfolio.data.SettingsRepository
 import com.buddy.budget.portfolio.data.YahooFinance
 import com.buddy.budget.portfolio.model.Analysis
 import com.buddy.budget.portfolio.model.AnalysisResult
-import com.buddy.budget.portfolio.model.Frequency
 import com.buddy.budget.portfolio.model.InputMode
 import com.buddy.budget.portfolio.model.PortfolioInput
 import com.buddy.budget.portfolio.model.PortfolioSettings
@@ -20,6 +19,7 @@ import com.buddy.budget.portfolio.model.parseNumber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import kotlin.math.roundToLong
 
 class PortfolioViewModel(application: Application) : AndroidViewModel(application) {
@@ -133,8 +133,10 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             try {
                 val riskFreeRate = riskFreeProxy?.let { YahooFinance.fetchRiskFreeRate(it) } ?: typedRiskFreeRate!!
+                // Ends on the last trading day of the previous month, as in the CLI.
+                val end = LocalDate.now().withDayOfMonth(1)
                 val prices = cachedPrices.takeIf { cachedKey == key }
-                    ?: YahooFinance.fetchPrices(fetchTickers, lookbackDays!!, current.frequency == Frequency.MONTHLY)
+                    ?: YahooFinance.fetchPrices(fetchTickers, end.minusDays(lookbackDays!!), end, current.frequency)
                 cachedPrices = prices
                 cachedKey = key
                 result = withContext(Dispatchers.Default) {
