@@ -28,12 +28,11 @@ fun copyToClipboard(context: Context, text: String) {
     Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
 }
 
-/** Shares the text both inline and as a .txt attachment, so it can go to a chat or be saved as a file. */
+/** Shares the text as a .txt file attachment only. */
 fun shareText(context: Context, text: String, fileName: String) {
     val file = sharedFile(context, fileName).apply { writeText(text) }
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
         putExtra(Intent.EXTRA_STREAM, uriFor(context, file))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
