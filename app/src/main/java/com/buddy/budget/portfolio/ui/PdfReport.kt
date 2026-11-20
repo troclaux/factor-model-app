@@ -44,6 +44,7 @@ class PdfReport(
         warnings()
         meanVariance()
         weights()
+        allocationPies()
         comparison()
         betas()
         capitalMarketLine()
@@ -164,6 +165,22 @@ class PdfReport(
             rows = order.map { index -> listOf(shortTicker(result.tickers[index])) + portfolios.map { it.weights[index].percent(1) } },
             highlightColumn = 1,
         )
+    }
+
+    /** Each stock's share of each portfolio's value. Short positions cannot be drawn as slices and are listed instead. */
+    private fun allocationPies() {
+        section("Allocation by value")
+        listOfNotNull(result.tangency, result.current, result.hypothetical).forEach { portfolio ->
+            paragraph(portfolio.name, size = 11f, color = TEXT, bold = true)
+            pie(result.tickers.indices.map { shortTicker(result.tickers[it]) to portfolio.weights[it] })
+            val shorts = result.tickers.indices.filter { portfolio.weights[it] < -1e-9 }
+            if (shorts.isNotEmpty()) {
+                paragraph(
+                    "Short positions, not shown: " + shorts.joinToString { "${shortTicker(result.tickers[it])} ${portfolio.weights[it].percent(1)}" } +
+                        ". Slices are shares of the long positions.",
+                )
+            }
+        }
     }
 
     private fun comparison() {

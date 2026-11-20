@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
 /**
  * A styled, paginated A4 PDF (units are points): green header band, section titles, paragraphs,
- * stat tiles, zebra tables and Compose drawings, with a footer and page numbers.
+ * stat tiles, zebra tables, pie charts and Compose drawings, with a footer and page numbers.
  */
 abstract class PdfWriter(context: Context, private val footerTitle: String) {
     private val document = PdfDocument()
@@ -46,6 +46,45 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
         canvas.drawText(title, MARGIN, 46f, text(22f, WHITE, bold = true))
         canvas.drawText(subtitle, MARGIN, 68f, text(10f, ACCENT_LIGHT))
         cursor = HEADER_HEIGHT + 24f
+    }
+
+    /**
+     * A pie of [slices] (label to value; non-positive values are left out) with a legend of
+     * labels and percentages beside it. Small slices are merged into "Others".
+     */
+    protected fun pie(slices: List<Pair<String, Double>>, maxSlices: Int = 10) {
+        val positive = slices.filter { it.second > 0 }.sortedByDescending { it.second }
+        if (positive.isEmpty()) return
+        val shown = if (positive.size > maxSlices) {
+            positive.take(maxSlices - 1) + ("Others" to positive.drop(maxSlices - 1).sumOf { it.second })
+        } else {
+            positive
+        }
+        val total = shown.sumOf { it.second }
+        val diameter = 170f
+        val legendRow = 15f
+        val height = maxOf(diameter, legendRow * shown.size)
+        ensure(height + 10f)
+        val oval = RectF(MARGIN + 10f, cursor, MARGIN + 10f + diameter, cursor + diameter)
+        var angle = -90f
+        shown.forEachIndexed { index, (_, value) ->
+            val sweep = (value / total * 360).toFloat()
+            canvas.drawArc(oval, angle, sweep, true, fill(PIE_COLORS[index % PIE_COLORS.size]))
+            angle += sweep
+        }
+        // White separators between slices.
+        val separator = stroke(WHITE).apply { strokeWidth = 1.5f; style = Paint.Style.STROKE }
+        canvas.drawOval(oval, separator)
+        val legendLeft = MARGIN + diameter + 40f
+        var top = cursor + (height - legendRow * shown.size) / 2
+        shown.forEachIndexed { index, (label, value) ->
+            canvas.drawRoundRect(RectF(legendLeft, top + 2f, legendLeft + 10f, top + 12f), 2f, 2f, fill(PIE_COLORS[index % PIE_COLORS.size]))
+            canvas.drawText(label, legendLeft + 16f, top + 11f, text(9f, TEXT))
+            val percent = text(9f, MUTED, bold = true).apply { textAlign = Paint.Align.RIGHT }
+            canvas.drawText("%.1f%%".format(value / total * 100), MARGIN + CONTENT_WIDTH, top + 11f, percent)
+            top += legendRow
+        }
+        cursor += height + 10f
     }
 
     // ---------- layout helpers ----------
@@ -211,5 +250,10 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
         const val WARNING_BACKGROUND = 0xFFFFF3E0.toInt()
         const val WARNING_TEXT = 0xFFBF360C.toInt()
 
+        /** Distinct, print-friendly slice colors. */
+        val PIE_COLORS = intArrayOf(
+            0xFF388E3C.toInt(), 0xFF1E88E5.toInt(), 0xFFFB8C00.toInt(), 0xFF8E24AA.toInt(), 0xFFE53935.toInt(),
+            0xFF00897B.toInt(), 0xFFFDD835.toInt(), 0xFF6D4C41.toInt(), 0xFF3949AB.toInt(), 0xFF9E9E9E.toInt(),
+        )
     }
 }
