@@ -6,12 +6,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.buddy.budget.portfolio.data.Pluggy
 import com.buddy.budget.portfolio.data.PriceTable
 import com.buddy.budget.portfolio.data.SettingsRepository
 import com.buddy.budget.portfolio.data.YahooFinance
 import com.buddy.budget.portfolio.model.Analysis
 import com.buddy.budget.portfolio.model.AnalysisResult
 import com.buddy.budget.portfolio.model.Frequency
+import com.buddy.budget.portfolio.model.InputMode
+import com.buddy.budget.portfolio.model.PortfolioInput
 import com.buddy.budget.portfolio.model.PortfolioSettings
 import com.buddy.budget.portfolio.model.parseNumber
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +33,10 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     var loading by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
+        private set
+    var message by mutableStateOf<String?>(null)
+        private set
+    var importing by mutableStateOf(false)
         private set
     var selectedTab by mutableStateOf(0)
 
@@ -52,6 +59,49 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun dismissError() {
         error = null
+    }
+
+    fun dismissMessage() {
+        message = null
+    }
+
+    /** Replaces "My portfolio" with the share counts reported through Open Finance and adds any new tickers. */
+    fun importHoldings() {
+        val current = settings
+        val itemIds = current.pluggyItemIds.split(Regex("[\\s,;]+")).filter { it.isNotEmpty() }
+        val validation = when {
+            current.pluggyClientId.isBlank() || current.pluggyClientSecret.isBlank() -> "Enter your Pluggy client ID and secret."
+            itemIds.isEmpty() -> "Enter at least one Pluggy item ID."
+            else -> null
+        }
+        if (validation != null) {
+            error = validation
+            return
+        }
+
+        importing = true
+        error = null
+        viewModelScope.launch {
+            try {
+                val holdings = Pluggy.fetchHoldings(current.pluggyClientId.trim(), current.pluggyClientSecret.trim(), itemIds)
+                if (holdings.isEmpty()) {
+                    error = "No stock, FII, BDR or ETF positions found in these connections."
+                } else {
+                    val added = holdings.keys - current.tickers.toSet()
+                    update {
+                        it.copy(
+                            tickers = (it.tickers + holdings.keys).distinct(),
+                            current = PortfolioInput(InputMode.SHARES, holdings.mapValues { (_, quantity) -> quantity.toBigDecimal().stripTrailingZeros().toPlainString() }),
+                        )
+                    }
+                    message = "Imported ${holdings.size} positions" + if (added.isEmpty()) "." else ", added ${added.joinToString()}."
+                }
+            } catch (exception: Exception) {
+                error = exception.message ?: "Import failed"
+            } finally {
+                importing = false
+            }
+        }
     }
 
     fun analyze() {

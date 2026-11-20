@@ -41,6 +41,10 @@ data class PortfolioSettings(
     val capital: String = "",
     val current: PortfolioInput = PortfolioInput(),
     val hypothetical: PortfolioInput = PortfolioInput(),
+    /** Pluggy (Open Finance) credentials and the item ids of your broker connections. Stored on the device only. */
+    val pluggyClientId: String = "",
+    val pluggyClientSecret: String = "",
+    val pluggyItemIds: String = "",
 )
 
 fun parseNumber(text: String): Double? = text.trim().replace(",", ".").toDoubleOrNull()

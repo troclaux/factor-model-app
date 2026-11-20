@@ -27,6 +27,7 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 - Tangency verification: (μᵢ − rf) / Cov(rᵢ, r_T) must match across assets (when shorts are allowed)
 - Intermediate values (prices, returns, means, covariance), like the CLI's `--verbose`
 - Copy the full text report or share it as `output.txt`; share either chart as a PNG
+- Import "My portfolio" from Open Finance via [Pluggy](https://docs.pluggy.ai) (free for personal use through MeuPluggy): stocks, FIIs, BDRs and ETFs become share counts, missing tickers are added. Client ID, secret and item IDs are entered in the app and stay on the phone
 - Every setting is saved on the device
 
 The math lives in `app/src/main/java/com/buddy/budget/portfolio/model/PortfolioMath.kt` and is unit-tested against the Python CLI:

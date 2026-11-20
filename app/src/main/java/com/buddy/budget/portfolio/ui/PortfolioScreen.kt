@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.buddy.budget.portfolio.PortfolioViewModel
 import com.buddy.budget.portfolio.model.Frequency
@@ -76,6 +77,12 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         viewModel.error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.dismissError()
+        }
+    }
+    LaunchedEffect(viewModel.message) {
+        viewModel.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.dismissMessage()
         }
     }
 
@@ -248,6 +255,8 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
             }
         }
 
+        item { OpenFinanceCard(viewModel) }
+
         item {
             PortfolioInputCard(
                 title = "My portfolio",
@@ -280,6 +289,82 @@ fun <T> ChoiceRow(options: List<T>, selected: T, label: (T) -> String, onSelect:
                 onClick = { onSelect(option) },
                 shape = SegmentedButtonDefaults.itemShape(index, options.size),
             ) { Text(label(option), maxLines = 1) }
+        }
+    }
+}
+
+/** Pluggy credentials and the import button that fills "My portfolio" from Open Finance. */
+@Composable
+private fun OpenFinanceCard(viewModel: PortfolioViewModel) {
+    val settings = viewModel.settings
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val configured = settings.pluggyClientId.isNotBlank() && settings.pluggyClientSecret.isNotBlank() && settings.pluggyItemIds.isNotBlank()
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Open Finance (Pluggy)", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (configured) "Ready to import your holdings" else "Not set up (optional)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+            }
+            AnimatedVisibility(expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Connect your broker at meu.pluggy.ai, then link MeuPluggy in the demo app at dashboard.pluggy.ai. " +
+                            "Paste that app's client ID and secret and the connection's item ID. Stored only on this phone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = settings.pluggyClientId,
+                        onValueChange = { value -> viewModel.update { it.copy(pluggyClientId = value) } },
+                        label = { Text("Client ID") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = settings.pluggyClientSecret,
+                        onValueChange = { value -> viewModel.update { it.copy(pluggyClientSecret = value) } },
+                        label = { Text("Client secret") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = settings.pluggyItemIds,
+                        onValueChange = { value -> viewModel.update { it.copy(pluggyItemIds = value) } },
+                        label = { Text("Item IDs") },
+                        supportingText = { Text("One per broker connection, separated by commas") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            Button(
+                onClick = viewModel::importHoldings,
+                enabled = configured && !viewModel.importing,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (viewModel.importing) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Importing…")
+                } else {
+                    Text("Import my holdings")
+                }
+            }
+            Text(
+                "Replaces My portfolio's share counts with your stocks, FIIs, BDRs and ETFs and adds missing tickers.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
