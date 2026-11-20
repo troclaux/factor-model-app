@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.buddy.budget.portfolio.data.LastAnalysisRepository
 import com.buddy.budget.portfolio.data.Pluggy
 import com.buddy.budget.portfolio.data.PriceTable
 import com.buddy.budget.portfolio.data.SettingsRepository
@@ -21,12 +22,15 @@ import com.buddy.budget.portfolio.model.parseNumber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.math.roundToLong
 
 class PortfolioViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = SettingsRepository(application)
+    private val lastAnalysisRepository = LastAnalysisRepository(File(application.filesDir, "last_analysis.json"))
 
     var settings by mutableStateOf(repository.load())
         private set
@@ -34,6 +38,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     /** The settings the current result was computed with, for reporting the inputs. */
     var analyzedSettings by mutableStateOf<PortfolioSettings?>(null)
+        private set
+    var analyzedAt by mutableStateOf<LocalDateTime?>(null)
         private set
     var loading by mutableStateOf(false)
         private set
@@ -48,6 +54,39 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     /** Prices are only re-downloaded when the tickers, window or frequency change. */
     private var cachedKey: String? = null
     private var cachedPrices: PriceTable? = null
+
+    init {
+        restoreLastAnalysis()
+    }
+
+    /** Recomputes the last saved analysis from its stored prices, so results survive closing the app. */
+    private fun restoreLastAnalysis() = viewModelScope.launch {
+        val saved = withContext(Dispatchers.IO) { lastAnalysisRepository.load() } ?: return@launch
+        val restored = runCatching {
+            withContext(Dispatchers.Default) { compute(saved.settings, saved.prices, saved.riskFreeRate, saved.riskFreeSource) }
+        }.getOrNull() ?: return@launch
+        // A new analysis started meanwhile wins.
+        if (result == null) {
+            result = restored
+            analyzedSettings = saved.settings
+            analyzedAt = saved.ranAt
+            selectedTab = 1
+        }
+    }
+
+    private fun compute(settings: PortfolioSettings, prices: PriceTable, riskFreeRate: Double, riskFreeSource: String) =
+        Analysis.run(
+            dates = prices.dates,
+            prices = prices.prices,
+            tickers = settings.tickers,
+            marketProxy = settings.marketProxy.trim().uppercase().ifEmpty { null },
+            riskFreeRate = riskFreeRate,
+            riskFreeSource = riskFreeSource,
+            allowShort = settings.allowShort,
+            frequency = settings.frequency,
+            current = settings.current,
+            hypothetical = settings.hypothetical,
+        )
 
     fun update(transform: (PortfolioSettings) -> PortfolioSettings) {
         settings = transform(settings)
@@ -153,21 +192,13 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                     ?: YahooFinance.fetchPrices(fetchTickers, start!!, end!!, current.frequency)
                 cachedPrices = prices
                 cachedKey = key
-                result = withContext(Dispatchers.Default) {
-                    Analysis.run(
-                        dates = prices.dates,
-                        prices = prices.prices,
-                        tickers = tickers,
-                        marketProxy = marketProxy,
-                        riskFreeRate = riskFreeRate,
-                        riskFreeSource = riskFreeProxy?.let { "fetched from $it" } ?: "entered",
-                        allowShort = current.allowShort,
-                        frequency = current.frequency,
-                        current = current.current,
-                        hypothetical = current.hypothetical,
-                    )
-                }
+                val riskFreeSource = riskFreeProxy?.let { "fetched from $it" } ?: "entered"
+                result = withContext(Dispatchers.Default) { compute(current, prices, riskFreeRate, riskFreeSource) }
                 analyzedSettings = current
+                analyzedAt = LocalDateTime.now().withNano(0)
+                val saved = LastAnalysisRepository.LastAnalysis(current, prices, riskFreeRate, riskFreeSource, analyzedAt!!)
+                // Losing the saved copy only means re-running after a restart, so a failed write is not an error.
+                withContext(Dispatchers.IO) { runCatching { lastAnalysisRepository.save(saved) } }
                 selectedTab = 1
             } catch (exception: Exception) {
                 error = exception.message ?: "Analysis failed"

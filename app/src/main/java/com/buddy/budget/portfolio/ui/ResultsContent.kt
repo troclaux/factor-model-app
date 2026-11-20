@@ -93,6 +93,15 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        viewModel.analyzedAt?.let { ranAt ->
+            item {
+                Text(
+                    "Analysis run on ${ranAt.toLocalDate()} at ${ranAt.toLocalTime()}. Tap Analyze on Setup to refresh.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         item { ReportActions(viewModel, result) }
         if (result.warnings.isNotEmpty()) item { WarningsCard(result.warnings) }
         item { SummaryCard(result) }
