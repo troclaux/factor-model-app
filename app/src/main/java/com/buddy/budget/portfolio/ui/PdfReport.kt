@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.buddy.budget.portfolio.model.AnalysisResult
+import com.buddy.budget.portfolio.model.PeriodMode
 import com.buddy.budget.portfolio.model.PortfolioInput
 import com.buddy.budget.portfolio.model.PortfolioMath
 import com.buddy.budget.portfolio.model.PortfolioSettings
@@ -97,8 +98,14 @@ class PdfReport(
             headers = null,
             rows = listOf(
                 listOf("Risk-free rate", result.riskFreeRate.percent() + if (proxy.isNotEmpty()) " (latest yield of $proxy)" else " (entered)"),
-                listOf("Lookback", "${settings.lookbackAmount.trim()} ${settings.lookbackUnit.label.lowercase()}"),
-                listOf("Price window", "${result.priceDates.first()} → ${result.endDate} (last trading day of the previous month)"),
+                listOf(
+                    "Period",
+                    when (settings.periodMode) {
+                        PeriodMode.LOOKBACK -> "${settings.lookbackAmount.trim()} ${settings.lookbackUnit.label.lowercase()} back from the end of the previous month"
+                        PeriodMode.DATES -> "${settings.startDate} to " + if (settings.endLatest) "the latest available close" else settings.endDate
+                    },
+                ),
+                listOf("Price window", "${result.priceDates.first()} → ${result.endDate} (first and last prices used)"),
                 listOf("Return frequency", "${result.frequency.label} (${result.frequency.periodsPerYear} periods per year)"),
                 listOf("Observations", "${result.observations} returns"),
                 listOf("Short selling", if (result.allowShort) "allowed" else "forbidden (all weights ≥ 0)"),

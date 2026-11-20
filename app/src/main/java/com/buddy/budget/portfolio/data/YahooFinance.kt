@@ -55,10 +55,9 @@ object YahooFinance {
 
     /**
      * Latest yield of a Yahoo yield ticker (e.g. ^IRX, ^TNX) as a decimal, from the 30 days before
-     * the first of the current month. Yahoo quotes these in percent (4.25 = 4.25%).
+     * [end] (exclusive). Yahoo quotes these in percent (4.25 = 4.25%).
      */
-    suspend fun fetchRiskFreeRate(ticker: String): Double = withContext(Dispatchers.IO) {
-        val end = LocalDate.now().withDayOfMonth(1)
+    suspend fun fetchRiskFreeRate(ticker: String, end: LocalDate): Double = withContext(Dispatchers.IO) {
         fetchSeries(ticker, end.minusDays(30), end).values.last() / 100.0
     }
 

@@ -2,6 +2,8 @@ package com.buddy.budget.portfolio.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -21,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -29,6 +32,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,8 +72,12 @@ import com.buddy.budget.portfolio.PortfolioViewModel
 import com.buddy.budget.portfolio.model.Frequency
 import com.buddy.budget.portfolio.model.InputMode
 import com.buddy.budget.portfolio.model.LookbackUnit
+import com.buddy.budget.portfolio.model.PeriodMode
 import com.buddy.budget.portfolio.model.PortfolioInput
+import com.buddy.budget.portfolio.model.parseDate
 import com.buddy.budget.portfolio.model.parseNumber
+import java.time.Instant
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -218,23 +228,46 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = settings.lookbackAmount,
-                    onValueChange = { value -> viewModel.update { it.copy(lookbackAmount = value) } },
-                    label = { Text("Lookback") },
-                    isError = (parseNumber(settings.lookbackAmount) ?: 0.0) <= 0.0,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                ChoiceRow(LookbackUnit.entries, settings.lookbackUnit, { it.label }) { unit ->
-                    viewModel.update { it.copy(lookbackUnit = unit) }
+                Text("Period", style = MaterialTheme.typography.labelLarge)
+                ChoiceRow(PeriodMode.entries, settings.periodMode, { it.label }) { mode ->
+                    viewModel.update { it.copy(periodMode = mode) }
+                }
+                if (settings.periodMode == PeriodMode.LOOKBACK) {
+                    OutlinedTextField(
+                        value = settings.lookbackAmount,
+                        onValueChange = { value -> viewModel.update { it.copy(lookbackAmount = value) } },
+                        label = { Text("Lookback") },
+                        supportingText = { Text("Ends on the last trading day of the previous month") },
+                        isError = (parseNumber(settings.lookbackAmount) ?: 0.0) <= 0.0,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    ChoiceRow(LookbackUnit.entries, settings.lookbackUnit, { it.label }) { unit ->
+                        viewModel.update { it.copy(lookbackUnit = unit) }
+                    }
+                } else {
+                    DateField("Start date", settings.startDate) { date -> viewModel.update { it.copy(startDate = date) } }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("End at latest available", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Use the most recent close",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = settings.endLatest, onCheckedChange = { value -> viewModel.update { it.copy(endLatest = value) } })
+                    }
+                    if (!settings.endLatest) {
+                        DateField("End date", settings.endDate) { date -> viewModel.update { it.copy(endDate = date) } }
+                    }
                 }
                 Text("Return frequency", style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(Frequency.entries, settings.frequency, { it.label }) { frequency ->
                     viewModel.update { it.copy(frequency = frequency) }
                 }
-                if (settings.frequency == Frequency.MONTHLY && settings.lookbackUnit != LookbackUnit.YEARS) {
+                if (settings.frequency == Frequency.MONTHLY && settings.periodMode == PeriodMode.LOOKBACK && settings.lookbackUnit != LookbackUnit.YEARS) {
                     Text(
                         "Short windows give few monthly returns. Daily is usually better here.",
                         style = MaterialTheme.typography.bodySmall,
@@ -289,6 +322,46 @@ fun <T> ChoiceRow(options: List<T>, selected: T, label: (T) -> String, onSelect:
                 onClick = { onSelect(option) },
                 shape = SegmentedButtonDefaults.itemShape(index, options.size),
             ) { Text(label(option), maxLines = 1) }
+        }
+    }
+}
+
+/** A read-only date field (yyyy-MM-dd) that opens a date picker when tapped. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateField(label: String, value: String, onChange: (String) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { if (it is PressInteraction.Release) picking = true }
+    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = {},
+        readOnly = true,
+        label = { Text(label) },
+        placeholder = { Text("Tap to pick a date") },
+        isError = parseDate(value) == null,
+        trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+        singleLine = true,
+        interactionSource = interactionSource,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    if (picking) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = parseDate(value)?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { onChange(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString()) }
+                    picking = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+        ) {
+            DatePicker(state)
         }
     }
 }

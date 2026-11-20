@@ -1,5 +1,7 @@
 package com.buddy.budget.portfolio.model
 
+import java.time.LocalDate
+
 enum class LookbackUnit(val label: String, val days: Double) {
     DAYS("Days", 1.0),
     WEEKS("Weeks", 7.0),
@@ -11,6 +13,12 @@ enum class Frequency(val label: String, val periodsPerYear: Int) {
     DAILY("Daily", 252),
     WEEKLY("Weekly", 52),
     MONTHLY("Monthly", 12),
+}
+
+/** How the price window is chosen: a lookback ending at the previous month's end, or explicit dates. */
+enum class PeriodMode(val label: String) {
+    LOOKBACK("Lookback"),
+    DATES("Dates"),
 }
 
 enum class InputMode(val label: String) {
@@ -34,8 +42,14 @@ data class PortfolioSettings(
     val riskFreePercent: String = "9",
     /** Yield ticker (e.g. ^IRX) to fetch the risk-free rate from; overrides riskFreePercent when set. */
     val riskFreeProxy: String = "",
+    val periodMode: PeriodMode = PeriodMode.LOOKBACK,
     val lookbackAmount: String = "53",
     val lookbackUnit: LookbackUnit = LookbackUnit.WEEKS,
+    /** ISO dates (yyyy-MM-dd) used when periodMode is DATES. */
+    val startDate: String = "",
+    val endDate: String = "",
+    /** In DATES mode, ignore endDate and use the most recent close. */
+    val endLatest: Boolean = true,
     val frequency: Frequency = Frequency.DAILY,
     val allowShort: Boolean = false,
     val riskAversion: String = "",
@@ -49,3 +63,5 @@ data class PortfolioSettings(
 )
 
 fun parseNumber(text: String): Double? = text.trim().replace(",", ".").toDoubleOrNull()
+
+fun parseDate(text: String): LocalDate? = runCatching { LocalDate.parse(text.trim()) }.getOrNull()

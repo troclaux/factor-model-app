@@ -16,8 +16,9 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 ## Portfolio features
 
 - Editable ticker list (B3 tickers need `.SA`) and market benchmark (default `^BVSP`)
-- Risk-free rate, lookback (days/weeks/months/years), daily, weekly or monthly returns, short selling on/off
-- Prices from Yahoo Finance (daily adjusted closes, window ends on the last trading day of the previous month; weekly and monthly use the last close of each week or month)
+- Risk-free rate, daily, weekly or monthly returns, short selling on/off
+- Period as a lookback (days/weeks/months/years, ending on the last trading day of the previous month) or as start and end dates, with the end optionally set to the latest available close
+- Prices from Yahoo Finance (daily adjusted closes; weekly and monthly use the last close of each week or month)
 - Tangency portfolio: weights, expected return, volatility, Sharpe ratio, market beta and Bloomberg-adjusted beta
 - Mean-variance diagram: efficient frontier, CML, assets, tangency point, your portfolio and a hypothetical one
 - Your portfolio and a hypothetical one, entered as share counts or weights (or pasted in the CLI's `TICKER VALUE` file format)

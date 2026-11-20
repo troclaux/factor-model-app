@@ -13,8 +13,10 @@ import com.buddy.budget.portfolio.data.YahooFinance
 import com.buddy.budget.portfolio.model.Analysis
 import com.buddy.budget.portfolio.model.AnalysisResult
 import com.buddy.budget.portfolio.model.InputMode
+import com.buddy.budget.portfolio.model.PeriodMode
 import com.buddy.budget.portfolio.model.PortfolioInput
 import com.buddy.budget.portfolio.model.PortfolioSettings
+import com.buddy.budget.portfolio.model.parseDate
 import com.buddy.budget.portfolio.model.parseNumber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -113,10 +115,24 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         val riskFreeProxy = current.riskFreeProxy.trim().uppercase().ifEmpty { null }
         val typedRiskFreeRate = parseNumber(current.riskFreePercent)?.div(100)
         val lookbackDays = parseNumber(current.lookbackAmount)?.times(current.lookbackUnit.days)?.roundToLong()
+        val startDate = parseDate(current.startDate)
+        // Price window [start, end): the end is exclusive.
+        val end = when (current.periodMode) {
+            // Ends on the last trading day of the previous month, as in the CLI.
+            PeriodMode.LOOKBACK -> LocalDate.now().withDayOfMonth(1)
+            PeriodMode.DATES -> if (current.endLatest) LocalDate.now().plusDays(1) else parseDate(current.endDate)?.plusDays(1)
+        }
+        val start = when (current.periodMode) {
+            PeriodMode.LOOKBACK -> lookbackDays?.takeIf { it > 0 }?.let { end?.minusDays(it) }
+            PeriodMode.DATES -> startDate
+        }
         val validation = when {
             tickers.size < 2 -> "Add at least two tickers."
             riskFreeProxy == null && typedRiskFreeRate == null -> "Enter a valid risk-free rate."
-            lookbackDays == null || lookbackDays <= 0 -> "Enter a positive lookback."
+            current.periodMode == PeriodMode.LOOKBACK && start == null -> "Enter a positive lookback."
+            current.periodMode == PeriodMode.DATES && startDate == null -> "Pick a start date."
+            end == null -> "Pick an end date or use the latest available."
+            start == null || start >= end -> "The start date must be before the end date."
             else -> null
         }
         if (validation != null) {
@@ -126,17 +142,15 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
 
         val marketProxy = current.marketProxy.trim().uppercase().ifEmpty { null }
         val fetchTickers = (tickers + listOfNotNull(marketProxy)).distinct()
-        val key = listOf(fetchTickers, lookbackDays, current.frequency).toString()
+        val key = listOf(fetchTickers, start, end, current.frequency).toString()
 
         loading = true
         error = null
         viewModelScope.launch {
             try {
-                val riskFreeRate = riskFreeProxy?.let { YahooFinance.fetchRiskFreeRate(it) } ?: typedRiskFreeRate!!
-                // Ends on the last trading day of the previous month, as in the CLI.
-                val end = LocalDate.now().withDayOfMonth(1)
+                val riskFreeRate = riskFreeProxy?.let { YahooFinance.fetchRiskFreeRate(it, end!!) } ?: typedRiskFreeRate!!
                 val prices = cachedPrices.takeIf { cachedKey == key }
-                    ?: YahooFinance.fetchPrices(fetchTickers, end.minusDays(lookbackDays!!), end, current.frequency)
+                    ?: YahooFinance.fetchPrices(fetchTickers, start!!, end!!, current.frequency)
                 cachedPrices = prices
                 cachedKey = key
                 result = withContext(Dispatchers.Default) {
