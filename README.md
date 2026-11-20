@@ -74,11 +74,11 @@ $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-
 ## Build
 
 ```bash
-export ANDROID_HOME="$HOME/Android/Sdk"
-./gradlew assembleDebug
+./build.sh            # runs the unit tests and builds the APK
+./build.sh --install  # also installs it on the phone connected over USB
 ```
 
-The APK will be at: `app/build/outputs/apk/debug/app-debug.apk`
+The script picks a JDK 17/21 (`JAVA_HOME`, or mise's Temurin 21) and defaults `ANDROID_HOME` to `~/Android/Sdk`. The APK will be at: `app/build/outputs/apk/debug/app-debug.apk`
 
 ## Install
 
