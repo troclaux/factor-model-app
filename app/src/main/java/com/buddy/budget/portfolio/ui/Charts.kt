@@ -169,7 +169,7 @@ private fun DrawScope.placeLabel(
 
 /** Pearson correlation heatmap; scrolls sideways when there are many tickers. */
 @Composable
-fun CorrelationHeatmap(result: AnalysisResult) {
+fun CorrelationHeatmap(result: AnalysisResult, modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val neutral = MaterialTheme.colorScheme.surfaceVariant
@@ -188,6 +188,7 @@ fun CorrelationHeatmap(result: AnalysisResult) {
                 .horizontalScroll(rememberScrollState())
                 .width(totalWidth)
                 .height(labelSpace + cell * count)
+                .then(modifier)
         ) {
             val offset = labelSpace.toPx()
             val side = cell.toPx()

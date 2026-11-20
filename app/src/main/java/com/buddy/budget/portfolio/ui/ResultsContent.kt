@@ -33,18 +33,22 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +63,7 @@ import com.buddy.budget.portfolio.model.Report
 import com.buddy.budget.portfolio.model.parseNumber
 import com.buddy.budget.portfolio.model.percent
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 @Composable
 fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
@@ -89,8 +94,8 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         if (result.warnings.isNotEmpty()) item { WarningsCard(result.warnings) }
         item { SummaryCard(result) }
         item {
-            SectionCard("Mean-variance diagram") {
-                MeanVarianceChart(result)
+            ChartCard("Mean-variance diagram", "tangency.png") { capture ->
+                MeanVarianceChart(result, capture)
                 ChartLegend(result)
             }
         }
@@ -99,8 +104,8 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         item { BetasCard(result) }
         item { AllocationCard(viewModel, result) }
         item {
-            SectionCard("Correlation") {
-                CorrelationHeatmap(result)
+            ChartCard("Correlation", "correlation_${result.startDate}_${result.endDate}.png") { capture ->
+                CorrelationHeatmap(result, capture)
             }
         }
         item { DataCard(result) }
@@ -187,6 +192,22 @@ private fun ReportActions(viewModel: PortfolioViewModel, result: AnalysisResult)
         OutlinedButton(onClick = { shareText(context, report(), "output.txt") }, modifier = Modifier.weight(1f)) {
             Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
             Text("Share .txt", Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
+/** A chart card whose chart can be shared as a PNG. [content] must apply the given modifier to the chart canvas. */
+@Composable
+private fun ChartCard(title: String, fileName: String, content: @Composable (Modifier) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val layer = rememberGraphicsLayer()
+    val background = MaterialTheme.colorScheme.surface.toArgb()
+    SectionCard(title) {
+        content(Modifier.recordInto(layer))
+        TextButton(onClick = { scope.launch { shareImage(context, layer.toImageBitmap(), background, fileName) } }) {
+            Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
+            Text("Share PNG", Modifier.padding(start = 8.dp))
         }
     }
 }
