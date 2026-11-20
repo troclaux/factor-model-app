@@ -32,6 +32,7 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 - Import "My portfolio" from Open Finance via [Pluggy](https://docs.pluggy.ai) (free for personal use through MeuPluggy): stocks, FIIs, BDRs and ETFs become share counts, missing tickers are added. Client ID, secret and item IDs are entered in the app and stay on the phone
 - Every setting is saved on the device
 - The last analysis is saved too: reopening the app shows its results again without downloading anything
+- A "What these numbers mean" glossary of every parameter and metric, at the end of the results and the PDF
 
 The math lives in `app/src/main/java/com/buddy/budget/portfolio/model/PortfolioMath.kt` and is unit-tested against the Python CLI:
 

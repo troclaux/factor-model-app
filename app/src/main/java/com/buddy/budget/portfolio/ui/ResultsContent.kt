@@ -1,6 +1,7 @@
 package com.buddy.budget.portfolio.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.buddy.budget.portfolio.PortfolioViewModel
 import com.buddy.budget.portfolio.model.AnalysisResult
+import com.buddy.budget.portfolio.model.Glossary
 import com.buddy.budget.portfolio.model.PortfolioMath
 import com.buddy.budget.portfolio.model.PortfolioSummary
 import com.buddy.budget.portfolio.model.Report
@@ -122,6 +124,7 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         }
         item { DataCard(result) }
         item { IntermediateCard(result) }
+        item { GlossaryCard() }
     }
 }
 
@@ -237,6 +240,31 @@ private fun ChartCard(title: String, fileName: String, content: @Composable (Mod
         TextButton(onClick = { scope.launch { shareImage(context, layer.toImageBitmap(), background, fileName) } }) {
             Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
             Text("Share PNG", Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
+/** Explanations of every parameter and metric, collapsed by default. */
+@Composable
+private fun GlossaryCard() {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }, verticalAlignment = Alignment.CenterVertically) {
+                Text("What these numbers mean", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Collapse" else "Expand")
+            }
+            if (expanded) {
+                listOf("Parameters" to Glossary.parameters, "Metrics" to Glossary.metrics).forEach { (title, entries) ->
+                    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    entries.forEach { entry ->
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(entry.term, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text(entry.explanation, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
         }
     }
 }

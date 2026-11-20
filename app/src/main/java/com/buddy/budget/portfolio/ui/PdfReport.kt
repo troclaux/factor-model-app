@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.buddy.budget.portfolio.model.AnalysisResult
+import com.buddy.budget.portfolio.model.Glossary
 import com.buddy.budget.portfolio.model.PeriodMode
 import com.buddy.budget.portfolio.model.PortfolioInput
 import com.buddy.budget.portfolio.model.PortfolioMath
@@ -71,6 +72,7 @@ class PdfReport(
         capitalAllocation()
         correlation()
         assumptions()
+        glossary()
         finishPage()
         file.outputStream().use { document.writeTo(it) }
         document.close()
@@ -295,6 +297,24 @@ class PdfReport(
                 "CAPM misses size/value/momentum effects, and the CML assumes you borrow at the risk-free rate. Match the " +
                 "risk-free maturity to your horizon. This is analysis, not investment advice.",
         )
+    }
+
+    private fun glossary() {
+        section("What these numbers mean")
+        listOf("Parameters" to Glossary.parameters, "Metrics" to Glossary.metrics).forEach { (title, entries) ->
+            paragraph(title, size = 11f, color = ACCENT, bold = true)
+            entries.forEach { entry ->
+                val term = staticLayout(entry.term, textPaint(9.5f, TEXT, bold = true), CONTENT_WIDTH)
+                val explanation = staticLayout(entry.explanation, textPaint(9f, MUTED), CONTENT_WIDTH)
+                // Keep each term with its explanation on the same page.
+                ensure((term.height + explanation.height + 10).toFloat())
+                drawLayout(term, MARGIN, cursor)
+                cursor += term.height + 2f
+                drawLayout(explanation, MARGIN, cursor)
+                cursor += explanation.height + 8f
+            }
+            cursor += 4f
+        }
     }
 
     // ---------- layout helpers ----------
