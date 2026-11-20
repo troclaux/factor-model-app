@@ -1,5 +1,6 @@
 package com.buddy.budget.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +24,7 @@ fun ExpenseRow(
     amount: String,
     tag: String,
     onAmountChange: (String) -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -32,8 +34,9 @@ fun ExpenseRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Tapping the name opens the editor for day, fatura and inflow.
         Row(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).clickable(onClick = onEdit).padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

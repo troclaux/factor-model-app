@@ -1,122 +1,137 @@
 package com.buddy.budget.viewmodel
 
 import android.app.Application
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import com.buddy.budget.data.BudgetStore
 import com.buddy.budget.data.ConfigRepository
 import com.buddy.budget.model.BudgetConfig
-import com.buddy.budget.model.BudgetResult
+import com.buddy.budget.model.BudgetDraft
+import com.buddy.budget.model.BudgetHistory
 import com.buddy.budget.model.Category
-import com.buddy.budget.model.DebtTaxItem
-import com.buddy.budget.model.ExpenseItem
-import com.buddy.budget.model.calculateBudget
+import com.buddy.budget.model.DefaultChange
+import com.buddy.budget.model.DraftItem
+import com.buddy.budget.model.HistoryEntry
+import com.buddy.budget.model.buildBudgetReport
+import java.time.LocalDate
 
-data class EditableItem<T>(
-    val original: T,
-    val amountText: String
-)
+/** Which list of the draft an item belongs to. */
+enum class Section { EXPENSES, DEBTS, TAXES }
 
 class BudgetViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = ConfigRepository(application)
-    private var config: BudgetConfig = repository.loadConfig()
+    private val configRepository = ConfigRepository(application)
+    private val store = BudgetStore(application.filesDir)
 
-    var salary = mutableStateOf(config.income.toBigDecimal().stripTrailingZeros().toPlainString())
+    var config: BudgetConfig by mutableStateOf(configRepository.loadConfig())
         private set
-    var leftover = mutableStateOf("0")
+    var history: List<HistoryEntry> by mutableStateOf(store.loadHistory())
         private set
-
-    val expenses = mutableStateListOf<EditableItem<ExpenseItem>>()
-    val debts = mutableStateListOf<EditableItem<DebtTaxItem>>()
-    val taxes = mutableStateListOf<EditableItem<DebtTaxItem>>()
+    var draft: BudgetDraft by mutableStateOf(loadOrStartDraft())
+        private set
+    var selectedTab by mutableStateOf(0)
+    var message by mutableStateOf<String?>(null)
+        private set
 
     val expandedCategories = mutableStateMapOf<String, Boolean>()
-    var faturaDebitDay = config.faturaDebitDay
-        private set
 
-    init {
-        config.expenses.forEach { item ->
-            expenses.add(EditableItem(item, formatDefault(item.amount)))
-        }
-        config.debts.forEach { item ->
-            debts.add(EditableItem(item, formatDefault(item.amount)))
-        }
-        config.taxes.forEach { item ->
-            taxes.add(EditableItem(item, formatDefault(item.amount)))
-        }
-    }
+    val month by derivedStateOf { draft.toMonth(config.faturaDebitDay) }
+    val report by derivedStateOf { buildBudgetReport(month) }
+    val previous by derivedStateOf { BudgetHistory.previousEntry(history, LocalDate.now()) }
+    val changesVsLast by derivedStateOf { BudgetHistory.changesVsLast(previous, month) }
 
-    val result by derivedStateOf {
-        calculateBudget(
-            salary = parseAmount(salary.value),
-            leftover = parseAmount(leftover.value),
-            expenses = expenses.map { it.original to parseAmount(it.amountText) },
-            debts = debts.map { it.original to parseAmount(it.amountText) },
-            taxes = taxes.map { it.original to parseAmount(it.amountText) }
-        )
-    }
-
+    /** Expenses grouped by category in the CLI's category order; fatura items are hidden while a lump sum is used. */
     val expensesByCategory by derivedStateOf {
-        expenses.groupBy { Category.fromString(it.original.category) }
+        draft.expenses.withIndex()
+            .filter { !(draft.useFaturaLump && it.value.isFatura) }
+            .groupBy { Category.fromString(it.value.category) }
             .toSortedMap(compareBy { it.ordinal })
     }
 
-    fun updateSalary(value: String) {
-        salary.value = value
+    /** The saved draft if it is for the current month, otherwise a new month from the config. */
+    private fun loadOrStartDraft(): BudgetDraft {
+        val today = LocalDate.now()
+        val saved = store.loadDraft()?.takeIf { draft ->
+            draft.monthKey == BudgetHistory.monthKey(today) && runCatching { draft.toMonth(config.faturaDebitDay) }.isSuccess
+        }
+        return saved ?: BudgetDraft.fromConfig(config, BudgetHistory.previousEntry(history, today), today)
     }
 
-    fun updateLeftover(value: String) {
-        leftover.value = value
+    private fun edit(transform: (BudgetDraft) -> BudgetDraft) {
+        draft = transform(draft)
+        store.saveDraft(draft)
     }
 
-    fun updateExpenseAmount(index: Int, value: String) {
-        if (index in expenses.indices) {
-            expenses[index] = expenses[index].copy(amountText = value)
+    fun updateSalary(value: String) = edit { it.copy(salary = value) }
+    fun updateLeftover(value: String) = edit { it.copy(leftover = value) }
+    fun updateProventos(value: String) = edit { it.copy(proventos = value) }
+    fun updateUseFaturaLump(value: Boolean) = edit { it.copy(useFaturaLump = value) }
+    fun updateFaturaLump(value: String) = edit { it.copy(faturaLump = value) }
+
+    fun items(section: Section): List<DraftItem> = when (section) {
+        Section.EXPENSES -> draft.expenses
+        Section.DEBTS -> draft.debts
+        Section.TAXES -> draft.taxes
+    }
+
+    fun updateItem(section: Section, index: Int, item: DraftItem) = edit { current ->
+        fun List<DraftItem>.replaced() = mapIndexed { position, existing -> if (position == index) item else existing }
+        when (section) {
+            Section.EXPENSES -> current.copy(expenses = current.expenses.replaced())
+            Section.DEBTS -> current.copy(debts = current.debts.replaced())
+            Section.TAXES -> current.copy(taxes = current.taxes.replaced())
         }
     }
 
-    fun updateDebtAmount(index: Int, value: String) {
-        if (index in debts.indices) {
-            debts[index] = debts[index].copy(amountText = value)
-        }
+    /** Adds a one-off expense or bonus for this month, named like budget.py's "Expense 1" / "Bonus 1". */
+    fun addOneOff(inflow: Boolean) = edit { current ->
+        val prefix = if (inflow) "Bonus" else "Expense"
+        val number = current.expenses.count { it.oneOff && it.inflow == inflow } + 1
+        expandedCategories[Category.OTHER.name] = true
+        current.copy(expenses = current.expenses + DraftItem("$prefix $number", "", inflow = inflow, oneOff = true))
     }
 
-    fun updateTaxAmount(index: Int, value: String) {
-        if (index in taxes.indices) {
-            taxes[index] = taxes[index].copy(amountText = value)
-        }
+    fun removeOneOff(index: Int) = edit { current ->
+        current.copy(expenses = current.expenses.filterIndexed { position, item -> position != index || !item.oneOff })
+    }
+
+    /** Starts the month over from the config defaults and last month's remembered values. */
+    fun resetMonth() {
+        val today = LocalDate.now()
+        edit { BudgetDraft.fromConfig(config, BudgetHistory.previousEntry(history, today), today) }
+        message = "Month reset to the defaults."
+    }
+
+    /** Saves this month to history, replacing any earlier save for the same month. */
+    fun saveMonth() {
+        val entry = BudgetHistory.entryFor(report, LocalDate.now())
+        val (updated, replaced) = BudgetHistory.upsert(history, entry)
+        store.saveHistory(updated)
+        history = updated
+        message = "${if (replaced) "Replaced" else "Saved"} history for ${entry.monthKey}."
+    }
+
+    fun defaultChanges(): List<DefaultChange> = BudgetHistory.findDefaultChanges(config, month)
+
+    fun saveDefaults(chosen: List<DefaultChange>) {
+        if (chosen.isEmpty()) return
+        val updated = chosen.fold(config) { current, change -> change.apply(current) }
+        configRepository.saveConfig(updated)
+        config = updated
+        message = "Updated ${chosen.size} default(s)."
+    }
+
+    fun dismissMessage() {
+        message = null
     }
 
     fun toggleCategory(category: String) {
         expandedCategories[category] = !(expandedCategories[category] ?: false)
     }
 
-    fun isCategoryExpanded(category: String): Boolean {
-        return expandedCategories[category] ?: false
-    }
-
-    fun categoryTotal(category: Category): Double {
-        return expenses
-            .filter { Category.fromString(it.original.category) == category && !it.original.inflow }
-            .sumOf { parseAmount(it.amountText) }
-    }
-
-    private fun formatDefault(amount: Double): String {
-        return if (amount == amount.toLong().toDouble()) {
-            amount.toLong().toString()
-        } else {
-            amount.toBigDecimal().stripTrailingZeros().toPlainString()
-        }
-    }
-
-    companion object {
-        fun parseAmount(text: String): Double {
-            if (text.isBlank()) return 0.0
-            return text.replace(",", ".").toDoubleOrNull() ?: 0.0
-        }
-    }
+    fun isCategoryExpanded(category: String): Boolean = expandedCategories[category] ?: false
 }

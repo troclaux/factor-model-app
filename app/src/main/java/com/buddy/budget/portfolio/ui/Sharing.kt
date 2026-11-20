@@ -52,7 +52,7 @@ suspend fun sharePdf(
     shareFile(context, file, "application/pdf", "Share PDF report")
 }
 
-private fun shareFile(context: Context, file: File, mimeType: String, title: String) {
+fun shareFile(context: Context, file: File, mimeType: String, title: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = mimeType
         putExtra(Intent.EXTRA_STREAM, uriFor(context, file))
@@ -74,7 +74,8 @@ fun shareImage(context: Context, image: ImageBitmap, background: Int, fileName: 
     shareFile(context, file, "image/png", "Share chart")
 }
 
-private fun sharedFile(context: Context, fileName: String) =
+/** A file in the cache folder that FileProvider shares. */
+fun sharedFile(context: Context, fileName: String) =
     File(context.cacheDir, "shared").apply { mkdirs() }.resolve(fileName)
 
 private fun uriFor(context: Context, file: File) =

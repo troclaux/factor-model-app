@@ -7,11 +7,19 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 
 ## Budget features
 
+Port of the `budget.py` CLI. Three tabs: Plan, Report and History.
+
 - Pre-populated expenses from config (same format as `budget.py`)
-- Real-time balance calculation as you edit amounts
-- Expenses grouped by category (Housing, Food, Health, etc.) with collapsible sections
-- Separate sections for Debts and Taxes
-- Shows "FREE TO SPEND" (green) or "DEFICIT" (red)
+- Real-time balance calculation as you edit amounts: net salary + leftover + inflows − outflows, shown as "FREE TO SPEND" (green) or "DEFICIT" (red)
+- Expenses grouped by category (Housing, Food, Health, etc.) with collapsible sections, plus Debts and Taxes
+- Tap an item to set its day, whether it goes on the credit card (fatura) and whether it is an inflow
+- Proventos (income received before the fatura debits), and the fatura as one total instead of itemized
+- One-off extra expenses and bonuses for the month
+- Report: payment timeline by day, fatura and non-fatura breakdowns, debts, taxes, outflows by category and changes vs last month; share it as a CLI-style `output.txt` or a styled PDF with a category pie and the history
+- History: save the month (saving again replaces it), then see each month's categories with % of expenses, fatura/non-fatura split and averages over all or the last 3/6/12 months. Same file format as `budget_history.json`
+- Remembered values: a new month starts with last month's balance as leftover and last month's fatura total
+- Save as defaults: pick which of this month's changed values (salary, proventos, any item's amount/day/fatura/inflow) become the new defaults
+- This month's edits are kept until the month changes
 
 ## Portfolio features
 
