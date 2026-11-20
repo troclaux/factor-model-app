@@ -24,11 +24,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -176,22 +179,39 @@ private fun SummaryCard(result: AnalysisResult) {
 @Composable
 private fun ReportActions(viewModel: PortfolioViewModel, result: AnalysisResult) {
     val context = LocalContext.current
-    fun report(): String {
-        val settings = viewModel.settings
-        return Report.text(
-            result,
-            riskAversion = parseNumber(settings.riskAversion)?.takeIf { it > 0 },
-            capital = parseNumber(settings.capital)?.takeIf { it > 0 },
-        )
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { copyToClipboard(context, report()) }, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(18.dp))
-            Text("Copy report", Modifier.padding(start = 8.dp))
+    val scope = rememberCoroutineScope()
+    var exportingPdf by remember { mutableStateOf(false) }
+    val riskAversion = parseNumber(viewModel.settings.riskAversion)?.takeIf { it > 0 }
+    val capital = parseNumber(viewModel.settings.capital)?.takeIf { it > 0 }
+    fun report() = Report.text(result, riskAversion, capital)
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = {
+                exportingPdf = true
+                scope.launch {
+                    try {
+                        sharePdf(context, result, viewModel.analyzedSettings ?: viewModel.settings, riskAversion, capital, "portfolio_report_${result.endDate}.pdf")
+                    } finally {
+                        exportingPdf = false
+                    }
+                }
+            },
+            enabled = !exportingPdf,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null, Modifier.size(18.dp))
+            Text(if (exportingPdf) "Creating PDF…" else "Share PDF report", Modifier.padding(start = 8.dp))
         }
-        OutlinedButton(onClick = { shareText(context, report(), "output.txt") }, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
-            Text("Share .txt", Modifier.padding(start = 8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { copyToClipboard(context, report()) }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(18.dp))
+                Text("Copy report", Modifier.padding(start = 8.dp))
+            }
+            OutlinedButton(onClick = { shareText(context, report(), "output.txt") }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
+                Text("Share .txt", Modifier.padding(start = 8.dp))
+            }
         }
     }
 }

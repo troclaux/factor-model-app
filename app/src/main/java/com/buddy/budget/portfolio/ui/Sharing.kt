@@ -14,6 +14,10 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.core.content.FileProvider
+import com.buddy.budget.portfolio.model.AnalysisResult
+import com.buddy.budget.portfolio.model.PortfolioSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Records what the modifier's content draws into [layer] so it can be exported later. */
@@ -31,12 +35,30 @@ fun copyToClipboard(context: Context, text: String) {
 /** Shares the text as a .txt file attachment only. */
 fun shareText(context: Context, text: String, fileName: String) {
     val file = sharedFile(context, fileName).apply { writeText(text) }
+    shareFile(context, file, "text/plain", "Share analysis")
+}
+
+/** Writes the styled PDF report off the main thread, then shares it. */
+suspend fun sharePdf(
+    context: Context,
+    result: AnalysisResult,
+    settings: PortfolioSettings,
+    riskAversion: Double?,
+    capital: Double?,
+    fileName: String,
+) {
+    val file = sharedFile(context, fileName)
+    withContext(Dispatchers.Default) { PdfReport(context, result, settings, riskAversion, capital).writeTo(file) }
+    shareFile(context, file, "application/pdf", "Share PDF report")
+}
+
+private fun shareFile(context: Context, file: File, mimeType: String, title: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
+        type = mimeType
         putExtra(Intent.EXTRA_STREAM, uriFor(context, file))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Share analysis"))
+    context.startActivity(Intent.createChooser(intent, title))
 }
 
 /** Shares a chart as a PNG. The chart is drawn over [background] since the on-screen canvas is transparent. */
@@ -49,12 +71,7 @@ fun shareImage(context: Context, image: ImageBitmap, background: Int, fileName: 
     }
     val file = sharedFile(context, fileName)
     file.outputStream().use { opaque.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "image/png"
-        putExtra(Intent.EXTRA_STREAM, uriFor(context, file))
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(intent, "Share chart"))
+    shareFile(context, file, "image/png", "Share chart")
 }
 
 private fun sharedFile(context: Context, fileName: String) =

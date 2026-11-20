@@ -27,6 +27,7 @@ Android app to plan how much to invest each month and where to put it. Two tabs:
 - Tangency verification: (μᵢ − rf) / Cov(rᵢ, r_T) must match across assets (when shorts are allowed)
 - Intermediate values (prices, returns, means, covariance), like the CLI's `--verbose`
 - Copy the full text report or share it as `output.txt`; share either chart as a PNG
+- Share a styled A4 PDF report: the inputs used (risk-free rate and source, lookback, price window, frequency, etc.), summary, both charts and all tables
 - Import "My portfolio" from Open Finance via [Pluggy](https://docs.pluggy.ai) (free for personal use through MeuPluggy): stocks, FIIs, BDRs and ETFs become share counts, missing tickers are added. Client ID, secret and item IDs are entered in the app and stay on the phone
 - Every setting is saved on the device
 

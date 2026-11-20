@@ -30,6 +30,9 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     var result by mutableStateOf<AnalysisResult?>(null)
         private set
+    /** The settings the current result was computed with, for reporting the inputs. */
+    var analyzedSettings by mutableStateOf<PortfolioSettings?>(null)
+        private set
     var loading by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
@@ -148,6 +151,7 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                         hypothetical = current.hypothetical,
                     )
                 }
+                analyzedSettings = current
                 selectedTab = 1
             } catch (exception: Exception) {
                 error = exception.message ?: "Analysis failed"
