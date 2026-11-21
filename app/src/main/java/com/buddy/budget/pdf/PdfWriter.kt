@@ -49,17 +49,13 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
     }
 
     /**
-     * A pie of [slices] (label to value; non-positive values are left out) with a legend of
-     * labels and percentages beside it. Small slices are merged into "Others".
+     * A pie of [slices] (label to value; non-positive values are left out) with every slice listed
+     * in a legend of labels and percentages beside it, largest first. [colorOf] picks each label's color;
+     * pass a fixed mapping to keep a label the same color across several pies.
      */
-    protected fun pie(slices: List<Pair<String, Double>>, maxSlices: Int = 10) {
-        val positive = slices.filter { it.second > 0 }.sortedByDescending { it.second }
-        if (positive.isEmpty()) return
-        val shown = if (positive.size > maxSlices) {
-            positive.take(maxSlices - 1) + ("Others" to positive.drop(maxSlices - 1).sumOf { it.second })
-        } else {
-            positive
-        }
+    protected fun pie(slices: List<Pair<String, Double>>, colorOf: (String) -> Int = defaultPieColors(slices)) {
+        val shown = slices.filter { it.second > 0 }.sortedByDescending { it.second }
+        if (shown.isEmpty()) return
         val total = shown.sumOf { it.second }
         val diameter = 170f
         val legendRow = 15f
@@ -67,9 +63,9 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
         ensure(height + 10f)
         val oval = RectF(MARGIN + 10f, cursor, MARGIN + 10f + diameter, cursor + diameter)
         var angle = -90f
-        shown.forEachIndexed { index, (_, value) ->
+        shown.forEach { (label, value) ->
             val sweep = (value / total * 360).toFloat()
-            canvas.drawArc(oval, angle, sweep, true, fill(PIE_COLORS[index % PIE_COLORS.size]))
+            canvas.drawArc(oval, angle, sweep, true, fill(colorOf(label)))
             angle += sweep
         }
         // White separators between slices.
@@ -77,8 +73,8 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
         canvas.drawOval(oval, separator)
         val legendLeft = MARGIN + diameter + 40f
         var top = cursor + (height - legendRow * shown.size) / 2
-        shown.forEachIndexed { index, (label, value) ->
-            canvas.drawRoundRect(RectF(legendLeft, top + 2f, legendLeft + 10f, top + 12f), 2f, 2f, fill(PIE_COLORS[index % PIE_COLORS.size]))
+        shown.forEach { (label, value) ->
+            canvas.drawRoundRect(RectF(legendLeft, top + 2f, legendLeft + 10f, top + 12f), 2f, 2f, fill(colorOf(label)))
             canvas.drawText(label, legendLeft + 16f, top + 11f, text(9f, TEXT))
             val percent = text(9f, MUTED, bold = true).apply { textAlign = Paint.Align.RIGHT }
             canvas.drawText("%.1f%%".format(value / total * 100), MARGIN + CONTENT_WIDTH, top + 11f, percent)
@@ -250,10 +246,26 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
         const val WARNING_BACKGROUND = 0xFFFFF3E0.toInt()
         const val WARNING_TEXT = 0xFFBF360C.toInt()
 
-        /** Distinct, print-friendly slice colors. */
+        /** Distinct, print-friendly slice colors; neighbors contrast so adjacent slices stay apart. */
         val PIE_COLORS = intArrayOf(
             0xFF388E3C.toInt(), 0xFF1E88E5.toInt(), 0xFFFB8C00.toInt(), 0xFF8E24AA.toInt(), 0xFFE53935.toInt(),
             0xFF00897B.toInt(), 0xFFFDD835.toInt(), 0xFF6D4C41.toInt(), 0xFF3949AB.toInt(), 0xFF9E9E9E.toInt(),
+            0xFF7CB342.toInt(), 0xFF64B5F6.toInt(), 0xFFFFB74D.toInt(), 0xFFBA68C8.toInt(), 0xFFF06292.toInt(),
+            0xFF4DB6AC.toInt(), 0xFFAFB42B.toInt(), 0xFFA1887F.toInt(), 0xFF7986CB.toInt(), 0xFF455A64.toInt(),
         )
+
+        /** Colors by size rank: the largest slice gets the first palette color. */
+        fun defaultPieColors(slices: List<Pair<String, Double>>): (String) -> Int {
+            val ranks = slices.filter { it.second > 0 }.sortedByDescending { it.second }.withIndex().associate { it.value.first to it.index }
+            return { label -> pieColor(ranks[label] ?: 0) }
+        }
+
+        /** The palette first, then hues spread by the golden angle so even long lists get distinct colors. */
+        fun pieColor(index: Int): Int =
+            if (index < PIE_COLORS.size) {
+                PIE_COLORS[index]
+            } else {
+                android.graphics.Color.HSVToColor(floatArrayOf((index * 137.508f) % 360f, 0.55f, 0.8f))
+            }
     }
 }

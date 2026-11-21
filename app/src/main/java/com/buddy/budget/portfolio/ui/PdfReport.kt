@@ -170,9 +170,11 @@ class PdfReport(
     /** Each stock's share of each portfolio's value. Short positions cannot be drawn as slices and are listed instead. */
     private fun allocationPies() {
         section("Allocation by value")
+        // Colors follow the ticker list, so a stock has the same color in every pie.
+        val colors = result.tickers.withIndex().associate { (index, ticker) -> shortTicker(ticker) to pieColor(index) }
         listOfNotNull(result.tangency, result.current, result.hypothetical).forEach { portfolio ->
             paragraph(portfolio.name, size = 11f, color = TEXT, bold = true)
-            pie(result.tickers.indices.map { shortTicker(result.tickers[it]) to portfolio.weights[it] })
+            pie(result.tickers.indices.map { shortTicker(result.tickers[it]) to portfolio.weights[it] }) { label -> colors.getValue(label) }
             val shorts = result.tickers.indices.filter { portfolio.weights[it] < -1e-9 }
             if (shorts.isNotEmpty()) {
                 paragraph(
