@@ -151,6 +151,13 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         configRepository.saveConfig(config)
     }
 
+    /** Reads everything again from storage, e.g. after restoring a backup. */
+    fun reload() {
+        config = configRepository.loadConfig()
+        history = store.loadHistory()
+        draft = loadOrStartDraft()
+    }
+
     /** Adds a one-off expense or bonus for this month, named like budget.py's "Expense 1" / "Bonus 1". */
     fun addOneOff(inflow: Boolean) = edit { current ->
         val prefix = if (inflow) "Bonus" else "Expense"

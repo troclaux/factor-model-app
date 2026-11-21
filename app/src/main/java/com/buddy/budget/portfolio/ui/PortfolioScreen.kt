@@ -76,6 +76,7 @@ import com.buddy.budget.portfolio.model.LookbackUnit
 import com.buddy.budget.portfolio.model.PeriodMode
 import com.buddy.budget.portfolio.model.PortfolioInput
 import com.buddy.budget.portfolio.model.parseDate
+import com.buddy.budget.ui.BackupMenu
 import com.buddy.budget.portfolio.model.parseNumber
 import java.time.Instant
 import java.time.ZoneOffset
@@ -102,6 +103,7 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
             Column {
                 TopAppBar(
                     title = { Text("Portfolio") },
+                    actions = { BackupMenu(tint = MaterialTheme.colorScheme.onPrimary) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary

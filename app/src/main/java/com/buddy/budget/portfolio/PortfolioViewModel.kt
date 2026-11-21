@@ -108,6 +108,11 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun removeTicker(ticker: String) = update { it.copy(tickers = it.tickers - ticker) }
 
+    /** Reads the settings again, e.g. after restoring a backup. */
+    fun reloadSettings() {
+        settings = repository.load()
+    }
+
     fun dismissError() {
         error = null
     }

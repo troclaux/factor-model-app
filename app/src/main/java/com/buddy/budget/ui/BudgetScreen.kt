@@ -92,6 +92,7 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
             Column {
                 TopAppBar(
                     title = { Text("Budget · ${viewModel.draft.monthKey}") },
+                    actions = { BackupMenu(tint = MaterialTheme.colorScheme.onPrimary) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary

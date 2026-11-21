@@ -49,6 +49,10 @@ The math lives in `app/src/main/java/com/buddy/budget/portfolio/model/PortfolioM
 ./gradlew testDebugUnitTest
 ```
 
+## Backup
+
+The ⋮ menu on either tab backs up all app data (budget defaults, history, this month's plan and portfolio settings) to a JSON file you can save anywhere, and restores it. Backups never include the Pluggy client secret.
+
 ## Prerequisites
 
 - JDK 17 or 21 (check with `java -version`). Gradle 8.9 does not run on JDK 25; with mise: `mise install java@temurin-21` and `export JAVA_HOME=$(mise where java@temurin-21)`
