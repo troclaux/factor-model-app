@@ -62,6 +62,7 @@ import com.buddy.budget.portfolio.ui.sharedFile
 import com.buddy.budget.ui.components.BalanceSummary
 import com.buddy.budget.ui.components.CategoryGroup
 import com.buddy.budget.ui.components.ExpenseRow
+import com.buddy.budget.ui.components.ItemDialogMode
 import com.buddy.budget.ui.components.ItemEditDialog
 import com.buddy.budget.ui.components.SalarySection
 import com.buddy.budget.viewmodel.BudgetViewModel
@@ -121,6 +122,8 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
 private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
     val draft = viewModel.draft
     var editing by remember { mutableStateOf<Pair<Section, Int>?>(null) }
+    var creating by remember { mutableStateOf<Section?>(null) }
+    var deleting by remember { mutableStateOf<Pair<Section, Int>?>(null) }
     var defaultChanges by remember { mutableStateOf<List<DefaultChange>?>(null) }
     var confirmingReset by remember { mutableStateOf(false) }
     val previous = viewModel.previous
@@ -191,6 +194,27 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Recurring items", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Add an item to your defaults and this month. Tap an item's name to rename, recategorize or delete it.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(Section.EXPENSES to "Expense", Section.DEBTS to "Debt", Section.TAXES to "Tax").forEach { (section, label) ->
+                            OutlinedButton(onClick = { creating = section }, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
+                                Text(label, Modifier.padding(start = 4.dp), maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("One-off items", style = MaterialTheme.typography.titleMedium)
                     Text(
                         "Extra expenses or income for this month only. They go under Other and are never saved as defaults.",
@@ -239,16 +263,70 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         } else {
             ItemEditDialog(
                 item = item,
+                title = item.name,
+                mode = ItemDialogMode.EDIT,
                 allowInflow = section == Section.EXPENSES,
+                allowCategory = section == Section.EXPENSES,
+                isNameTaken = { name -> viewModel.nameTaken(section, name, exceptIndex = index) },
                 onDismiss = { editing = null },
                 onSave = { updated ->
                     viewModel.updateItem(section, index, updated)
                     editing = null
                 },
-                onRemove = if (item.oneOff) ({
-                    viewModel.removeOneOff(index)
-                    editing = null
-                }) else null,
+                onRemove = if (item.oneOff) {
+                    {
+                        viewModel.removeOneOff(index)
+                        editing = null
+                    }
+                } else {
+                    {
+                        deleting = section to index
+                        editing = null
+                    }
+                },
+                removeLabel = if (item.oneOff) "Remove" else "Delete",
+            )
+        }
+    }
+
+    creating?.let { section ->
+        val noun = when (section) {
+            Section.EXPENSES -> "expense"
+            Section.DEBTS -> "debt"
+            Section.TAXES -> "tax"
+        }
+        ItemEditDialog(
+            item = DraftItem(name = "", amount = ""),
+            title = "New recurring $noun",
+            mode = ItemDialogMode.CREATE,
+            allowInflow = section == Section.EXPENSES,
+            allowCategory = section == Section.EXPENSES,
+            isNameTaken = { name -> viewModel.nameTaken(section, name, exceptIndex = null) },
+            onDismiss = { creating = null },
+            onSave = { item ->
+                viewModel.addRecurring(section, item)
+                creating = null
+            },
+            onRemove = null,
+        )
+    }
+
+    deleting?.let { (section, index) ->
+        val name = viewModel.items(section).getOrNull(index)?.name
+        if (name == null) {
+            deleting = null
+        } else {
+            AlertDialog(
+                onDismissRequest = { deleting = null },
+                title = { Text("Delete $name?") },
+                text = { Text("It is removed from your defaults and from this month. Saved months in History keep it.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.removeRecurring(section, index)
+                        deleting = null
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
             )
         }
     }

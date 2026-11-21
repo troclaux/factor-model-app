@@ -13,8 +13,10 @@ import com.buddy.budget.model.BudgetConfig
 import com.buddy.budget.model.BudgetDraft
 import com.buddy.budget.model.BudgetHistory
 import com.buddy.budget.model.Category
+import com.buddy.budget.model.DebtTaxItem
 import com.buddy.budget.model.DefaultChange
 import com.buddy.budget.model.DraftItem
+import com.buddy.budget.model.ExpenseItem
 import com.buddy.budget.model.HistoryEntry
 import com.buddy.budget.model.buildBudgetReport
 import java.time.LocalDate
@@ -78,13 +80,75 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         Section.TAXES -> draft.taxes
     }
 
-    fun updateItem(section: Section, index: Int, item: DraftItem) = edit { current ->
-        fun List<DraftItem>.replaced() = mapIndexed { position, existing -> if (position == index) item else existing }
-        when (section) {
-            Section.EXPENSES -> current.copy(expenses = current.expenses.replaced())
-            Section.DEBTS -> current.copy(debts = current.debts.replaced())
-            Section.TAXES -> current.copy(taxes = current.taxes.replaced())
+    /**
+     * Updates this month's item. Renaming or recategorizing a recurring item also changes it in the
+     * defaults (they are matched by name); amounts, days and flags stay this month's until saved as defaults.
+     */
+    fun updateItem(section: Section, index: Int, item: DraftItem) {
+        val old = items(section).getOrNull(index) ?: return
+        if (!old.oneOff && (old.name != item.name || old.category != item.category)) {
+            updateConfig { config ->
+                when (section) {
+                    Section.EXPENSES -> config.copy(expenses = config.expenses.map { if (it.name == old.name) it.copy(name = item.name, category = item.category) else it })
+                    Section.DEBTS -> config.copy(debts = config.debts.map { if (it.name == old.name) it.copy(name = item.name) else it })
+                    Section.TAXES -> config.copy(taxes = config.taxes.map { if (it.name == old.name) it.copy(name = item.name) else it })
+                }
+            }
         }
+        edit { current -> current.withSection(section) { list -> list.mapIndexed { position, existing -> if (position == index) item else existing } } }
+    }
+
+    /** True when another item of the section already has this name (names identify items in the defaults). */
+    fun nameTaken(section: Section, name: String, exceptIndex: Int?): Boolean =
+        items(section).withIndex().any { (index, item) -> index != exceptIndex && item.name.equals(name.trim(), ignoreCase = true) }
+
+    /** Adds a recurring item to the defaults and to this month. */
+    fun addRecurring(section: Section, item: DraftItem) {
+        val added = item.copy(
+            name = item.name.trim(),
+            oneOff = false,
+            category = when (section) {
+                Section.EXPENSES -> item.category
+                Section.DEBTS -> "debt"
+                Section.TAXES -> "taxes"
+            },
+        )
+        val amount = BudgetDraft.parseAmount(added.amount)
+        updateConfig { config ->
+            when (section) {
+                Section.EXPENSES -> config.copy(expenses = config.expenses + ExpenseItem(added.name, amount, added.day, added.category, added.isFatura, added.inflow))
+                Section.DEBTS -> config.copy(debts = config.debts + DebtTaxItem(added.name, amount, added.day, added.isFatura))
+                Section.TAXES -> config.copy(taxes = config.taxes + DebtTaxItem(added.name, amount, added.day, added.isFatura))
+            }
+        }
+        edit { current -> current.withSection(section) { it + added } }
+        if (section == Section.EXPENSES) expandedCategories[Category.fromString(added.category).name] = true else expandedCategories[section.name] = true
+        message = "Added ${added.name} to your defaults."
+    }
+
+    /** Deletes a recurring item from the defaults and from this month. */
+    fun removeRecurring(section: Section, index: Int) {
+        val item = items(section).getOrNull(index) ?: return
+        updateConfig { config ->
+            when (section) {
+                Section.EXPENSES -> config.copy(expenses = config.expenses.filter { it.name != item.name })
+                Section.DEBTS -> config.copy(debts = config.debts.filter { it.name != item.name })
+                Section.TAXES -> config.copy(taxes = config.taxes.filter { it.name != item.name })
+            }
+        }
+        edit { current -> current.withSection(section) { list -> list.filterIndexed { position, _ -> position != index } } }
+        message = "Deleted ${item.name} from your defaults."
+    }
+
+    private fun BudgetDraft.withSection(section: Section, transform: (List<DraftItem>) -> List<DraftItem>) = when (section) {
+        Section.EXPENSES -> copy(expenses = transform(expenses))
+        Section.DEBTS -> copy(debts = transform(debts))
+        Section.TAXES -> copy(taxes = transform(taxes))
+    }
+
+    private fun updateConfig(transform: (BudgetConfig) -> BudgetConfig) {
+        config = transform(config)
+        configRepository.saveConfig(config)
     }
 
     /** Adds a one-off expense or bonus for this month, named like budget.py's "Expense 1" / "Bonus 1". */
@@ -119,9 +183,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveDefaults(chosen: List<DefaultChange>) {
         if (chosen.isEmpty()) return
-        val updated = chosen.fold(config) { current, change -> change.apply(current) }
-        configRepository.saveConfig(updated)
-        config = updated
+        updateConfig { current -> chosen.fold(current) { updated, change -> change.apply(updated) } }
         message = "Updated ${chosen.size} default(s)."
     }
 

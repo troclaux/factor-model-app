@@ -20,6 +20,7 @@ Port of the `budget.py` CLI. Three tabs: Plan, Report and History.
 - Remembered values: a new month starts with last month's balance as leftover and last month's fatura total
 - Save as defaults: pick which of this month's changed values (salary, proventos, any item's amount/day/fatura/inflow) become the new defaults
 - This month's edits are kept until the month changes
+- Add, rename, recategorize and delete recurring expenses, debts and taxes in the app, without editing the config file
 
 ## Portfolio features
 
