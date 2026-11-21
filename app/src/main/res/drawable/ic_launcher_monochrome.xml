@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Single-color version for Android 13 themed icons; the system tints it. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M51,57 L51,35 A22,22 0 1,0 73,57 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M55,53 L55,31 A22,22 0 0,1 77,53 Z" />
+</vector>
