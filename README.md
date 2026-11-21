@@ -37,7 +37,7 @@ Port of the `budget.py` CLI. Three tabs: Plan, Report and History.
 - Intermediate values (prices, returns, means, covariance), like the CLI's `--verbose`
 - Copy the full text report or share it as `output.txt`; share either chart as a PNG
 - Share a styled A4 PDF report: the inputs used (risk-free rate and source, lookback, price window, frequency, etc.), summary, both charts and all tables
-- Import "My portfolio" from Open Finance via [Pluggy](https://docs.pluggy.ai) (free for personal use through MeuPluggy): stocks, FIIs, BDRs and ETFs become share counts, missing tickers are added. Client ID, secret and item IDs are entered in the app and stay on the phone
+- Import "My portfolio" from Open Finance via [Pluggy](https://docs.pluggy.ai) (free for personal use through MeuPluggy): stocks, FIIs, BDRs and ETFs become share counts, missing tickers are added. Client ID, secret and item IDs are entered in the app and stay on the phone; the secret is encrypted with a key held in the Android Keystore
 - Every setting is saved on the device
 - The last analysis is saved too: reopening the app shows its results again without downloading anything
 - A "What these numbers mean" glossary of every parameter and metric, at the end of the results and the PDF

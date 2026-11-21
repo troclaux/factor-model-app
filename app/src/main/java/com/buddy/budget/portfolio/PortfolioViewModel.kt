@@ -63,6 +63,12 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     /** Recomputes the last saved analysis from its stored prices, so results survive closing the app. */
     private fun restoreLastAnalysis() = viewModelScope.launch {
         val saved = withContext(Dispatchers.IO) { lastAnalysisRepository.load() } ?: return@launch
+        // Earlier versions stored the settings, Pluggy secret included, in this file: rewrite it without the secret.
+        if (saved.settings.pluggyClientSecret.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                runCatching { lastAnalysisRepository.save(saved.copy(settings = saved.settings.copy(pluggyClientSecret = ""))) }
+            }
+        }
         val restored = runCatching {
             withContext(Dispatchers.Default) { compute(saved.settings, saved.prices, saved.riskFreeRate, saved.riskFreeSource) }
         }.getOrNull() ?: return@launch
@@ -207,7 +213,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 result = withContext(Dispatchers.Default) { compute(current, prices, riskFreeRate, riskFreeSource) }
                 analyzedSettings = current
                 analyzedAt = LocalDateTime.now().withNano(0)
-                val saved = LastAnalysisRepository.LastAnalysis(current, prices, riskFreeRate, riskFreeSource, analyzedAt!!)
+                // The Pluggy secret stays in the encrypted store only.
+                val saved = LastAnalysisRepository.LastAnalysis(current.copy(pluggyClientSecret = ""), prices, riskFreeRate, riskFreeSource, analyzedAt!!)
                 // Losing the saved copy only means re-running after a restart, so a failed write is not an error.
                 withContext(Dispatchers.IO) { runCatching { lastAnalysisRepository.save(saved) } }
                 selectedTab = 1
