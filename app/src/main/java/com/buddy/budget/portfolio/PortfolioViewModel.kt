@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.buddy.budget.portfolio.data.BancoCentral
 import com.buddy.budget.portfolio.data.LastAnalysisRepository
 import com.buddy.budget.portfolio.data.Pluggy
 import com.buddy.budget.portfolio.data.PriceTable
@@ -187,12 +188,22 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         error = null
         viewModelScope.launch {
             try {
-                val riskFreeRate = riskFreeProxy?.let { YahooFinance.fetchRiskFreeRate(it, end!!) } ?: typedRiskFreeRate!!
+                // CDI or SELIC come from the Banco Central; anything else is a Yahoo yield ticker.
+                val centralBankRate = riskFreeProxy?.let { BancoCentral.rateNamed(it) }
+                val riskFreeRate = when {
+                    centralBankRate != null -> BancoCentral.fetchRate(centralBankRate, end!!)
+                    riskFreeProxy != null -> YahooFinance.fetchRiskFreeRate(riskFreeProxy, end!!)
+                    else -> typedRiskFreeRate!!
+                }
                 val prices = cachedPrices.takeIf { cachedKey == key }
                     ?: YahooFinance.fetchPrices(fetchTickers, start!!, end!!, current.frequency)
                 cachedPrices = prices
                 cachedKey = key
-                val riskFreeSource = riskFreeProxy?.let { "fetched from $it" } ?: "entered"
+                val riskFreeSource = when {
+                    centralBankRate != null -> "${centralBankRate.label}, Banco Central"
+                    riskFreeProxy != null -> "fetched from $riskFreeProxy"
+                    else -> "entered"
+                }
                 result = withContext(Dispatchers.Default) { compute(current, prices, riskFreeRate, riskFreeSource) }
                 analyzedSettings = current
                 analyzedAt = LocalDateTime.now().withNano(0)

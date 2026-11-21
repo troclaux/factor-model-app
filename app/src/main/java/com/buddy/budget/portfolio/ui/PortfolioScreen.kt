@@ -34,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -224,10 +225,19 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                     value = settings.riskFreeProxy,
                     onValueChange = { value -> viewModel.update { it.copy(riskFreeProxy = value) } },
                     label = { Text("Risk-free proxy") },
-                    supportingText = { Text("Yield ticker, e.g. ^IRX (13-week T-bill) or ^TNX (10-year). Overrides the rate above.") },
+                    supportingText = { Text("CDI or SELIC (Banco Central), or a Yahoo yield ticker such as ^IRX. Overrides the rate above.") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("CDI", "SELIC").forEach { name ->
+                        FilterChip(
+                            selected = settings.riskFreeProxy.trim().equals(name, ignoreCase = true),
+                            onClick = { viewModel.update { it.copy(riskFreeProxy = if (it.riskFreeProxy.trim().equals(name, ignoreCase = true)) "" else name) } },
+                            label = { Text(if (name == "SELIC") "Selic" else name) },
+                        )
+                    }
+                }
                 Text("Period", style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(PeriodMode.entries, settings.periodMode, { it.label }) { mode ->
                     viewModel.update { it.copy(periodMode = mode) }

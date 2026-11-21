@@ -67,7 +67,6 @@ class PdfReport(
 
     private fun inputs() {
         section("Inputs used")
-        val proxy = settings.riskFreeProxy.trim().uppercase()
         fun describe(input: PortfolioInput): String {
             val filled = input.values.values.count { (parseNumber(it) ?: 0.0) != 0.0 }
             return if (filled == 0) "not set" else "$filled positions, entered as ${input.mode.label.lowercase().removeSuffix(" %")}"
@@ -75,7 +74,7 @@ class PdfReport(
         table(
             headers = null,
             rows = listOf(
-                listOf("Risk-free rate", result.riskFreeRate.percent() + if (proxy.isNotEmpty()) " (latest yield of $proxy)" else " (entered)"),
+                listOf("Risk-free rate", "${result.riskFreeRate.percent()} (${result.riskFreeSource})"),
                 listOf(
                     "Period",
                     when (settings.periodMode) {

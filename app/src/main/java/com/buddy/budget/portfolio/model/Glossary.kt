@@ -19,9 +19,9 @@ object Glossary {
         Entry(
             "Risk-free rate",
             "The annual return of an asset with no risk, such as Selic/CDI or a short-term Treasury bill. Every \"excess " +
-                "return\" below is measured over it, and it is where the Capital Market Line starts. With a risk-free proxy " +
-                "(e.g. ^IRX) the app uses that yield's latest close before the end of the window. Pick a maturity that " +
-                "matches your investment horizon.",
+                "return\" below is measured over it, and it is where the Capital Market Line starts. With CDI or Selic as " +
+                "the proxy the app uses the Banco Central's latest annualized rate before the end of the window; with a " +
+                "Yahoo yield ticker (e.g. ^IRX) that yield's latest close. Pick a maturity that matches your investment horizon.",
         ),
         Entry(
             "Period",

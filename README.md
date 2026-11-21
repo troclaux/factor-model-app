@@ -32,7 +32,7 @@ Port of the `budget.py` CLI. Three tabs: Plan, Report and History.
 - Your portfolio and a hypothetical one, entered as share counts or weights (or pasted in the CLI's `TICKER VALUE` file format)
 - CML allocation for risk aversion A (1, 2, 5 and your own) and capital split into whole shares
 - Per-asset betas (vs tangency and vs market) and a correlation heatmap
-- Risk-free rate typed in or fetched from a yield ticker (e.g. `^IRX`, `^TNX`)
+- Risk-free rate typed in, CDI or Selic from the Banco Central's public API, or a Yahoo yield ticker (e.g. `^IRX`, `^TNX`)
 - Tangency verification: (μᵢ − rf) / Cov(rᵢ, r_T) must match across assets (when shorts are allowed)
 - Intermediate values (prices, returns, means, covariance), like the CLI's `--verbose`
 - Copy the full text report or share it as `output.txt`; share either chart as a PNG
