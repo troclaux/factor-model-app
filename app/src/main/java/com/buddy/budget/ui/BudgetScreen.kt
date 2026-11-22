@@ -127,6 +127,7 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
     var deleting by remember { mutableStateOf<Pair<Section, Int>?>(null) }
     var defaultChanges by remember { mutableStateOf<List<DefaultChange>?>(null) }
     var confirmingReset by remember { mutableStateOf(false) }
+    var confirmingSave by remember { mutableStateOf(false) }
     val previous = viewModel.previous
     val leftoverHint = if (previous != null && BudgetHistory.defaultLeftover(previous, java.time.LocalDate.now()) != 0.0) {
         "Balance of ${previous.monthKey}"
@@ -245,7 +246,7 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Button(onClick = viewModel::saveMonth, modifier = Modifier.fillMaxWidth()) { Text("Save month to history") }
+                    Button(onClick = { confirmingSave = true }, modifier = Modifier.fillMaxWidth()) { Text("Save month to history") }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { defaultChanges = viewModel.defaultChanges() }, modifier = Modifier.weight(1f)) { Text("Save as defaults…") }
                         OutlinedButton(onClick = { confirmingReset = true }, modifier = Modifier.weight(1f)) { Text("Reset month") }
@@ -336,6 +337,23 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         viewModel.saveDefaults(chosen)
         defaultChanges = null
     } }
+
+    if (confirmingSave) {
+        val monthKey = draft.monthKey
+        val replaces = viewModel.history.any { it.monthKey == monthKey }
+        AlertDialog(
+            onDismissRequest = { confirmingSave = false },
+            title = { Text("Save $monthKey to history?") },
+            text = {
+                Text(
+                    "Balance: ${money(viewModel.report.balance)}." +
+                        if (replaces) " This replaces the $monthKey entry already in History." else ""
+                )
+            },
+            confirmButton = { TextButton(onClick = { viewModel.saveMonth(); confirmingSave = false }) { Text(if (replaces) "Replace" else "Save") } },
+            dismissButton = { TextButton(onClick = { confirmingSave = false }) { Text("Cancel") } },
+        )
+    }
 
     if (confirmingReset) {
         AlertDialog(
