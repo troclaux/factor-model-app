@@ -162,7 +162,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun BudgetDraft.withSection(section: Section, transform: (List<DraftItem>) -> List<DraftItem>) = when (section) {
-        Section.EXPENSES -> copy(expenses = transform(expenses))
+        Section.EXPENSES -> withExpenses(transform(expenses))
         Section.DEBTS -> copy(debts = transform(debts))
         Section.TAXES -> copy(taxes = transform(taxes))
     }
@@ -188,7 +188,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun removeOneOff(index: Int) = edit { current ->
-        current.copy(expenses = current.expenses.filterIndexed { position, item -> position != index || !item.oneOff })
+        current.withExpenses(current.expenses.filterIndexed { position, item -> position != index || !item.oneOff })
     }
 
     /** Starts the month over from the config defaults and last month's remembered values. */

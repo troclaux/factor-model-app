@@ -1,6 +1,7 @@
 package com.buddy.budget.model
 
 import java.time.LocalDate
+import kotlin.math.abs
 
 /** An expense, debt or tax being edited. Amounts are kept as typed so the fields round-trip exactly. */
 data class DraftItem(
@@ -36,6 +37,20 @@ data class BudgetDraft(
         taxes = taxes.map { DebtTaxItem(it.name, parseAmount(it.amount), it.day, it.isFatura) },
         faturaDay = faturaDay,
     )
+
+    /**
+     * This draft with new [expenses]. With a fatura lump sum the lump moves by the change in the fatura
+     * expenses (outflows add, inflows subtract), so editing, adding or removing them still shows in the totals.
+     */
+    fun withExpenses(expenses: List<DraftItem>): BudgetDraft {
+        val change = faturaNet(expenses) - faturaNet(this.expenses)
+        if (!useFaturaLump || abs(change) < 0.005) return copy(expenses = expenses)
+        val lump = Math.round((parseAmount(faturaLump) + change) * 100) / 100.0
+        return copy(expenses = expenses, faturaLump = format(lump))
+    }
+
+    private fun faturaNet(items: List<DraftItem>) =
+        items.filter { it.isFatura }.sumOf { if (it.inflow) -parseAmount(it.amount) else parseAmount(it.amount) }
 
     companion object {
         /** A new month from the config, with leftover and fatura total remembered from last month (as budget.py does). */
