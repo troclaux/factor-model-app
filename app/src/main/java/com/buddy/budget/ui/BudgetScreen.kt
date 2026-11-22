@@ -575,7 +575,7 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
                     }
                     OutlinedButton(onClick = { shareText(context, text(), "output.txt") }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
-                        Text(tr("Share .txt"), Modifier.padding(start = 8.dp))
+                        Text(tr("Share"), Modifier.padding(start = 8.dp))
                     }
                 }
             }

@@ -28,7 +28,7 @@ internal val portuguese: Map<String, String> = mapOf(
     "Creating PDF…" to "Criando PDF…",
     "Share PDF report" to "Compartilhar relatório PDF",
     "Copy report" to "Copiar relatório",
-    "Share .txt" to "Compartilhar .txt",
+    "Share" to "Compartilhar",
 
     // Budget categories
     "Housing" to "Moradia",
