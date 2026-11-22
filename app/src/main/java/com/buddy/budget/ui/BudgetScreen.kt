@@ -70,6 +70,8 @@ import com.buddy.budget.ui.components.ExpenseRow
 import com.buddy.budget.ui.components.ItemDialogMode
 import com.buddy.budget.ui.components.ItemEditDialog
 import com.buddy.budget.ui.components.SalarySection
+import com.buddy.budget.ui.theme.Green500
+import com.buddy.budget.ui.theme.Red500
 import com.buddy.budget.viewmodel.BudgetViewModel
 import com.buddy.budget.viewmodel.Section
 import kotlinx.coroutines.Dispatchers
@@ -401,10 +403,10 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
     var deleting by remember { mutableStateOf<Pair<Section, Int>?>(null) }
     // True while adding a recurring inflow, false for an outflow.
     var creatingInflow by remember { mutableStateOf<Boolean?>(null) }
-    val expenses = viewModel.draft.expenses.withIndex()
-    val outflows = expenses.filter { !it.value.inflow }.map { Section.EXPENSES to it } +
-        listOf(Section.DEBTS, Section.TAXES).flatMap { section -> viewModel.items(section).withIndex().map { section to it } }
-    val inflows = expenses.filter { it.value.inflow }.map { Section.EXPENSES to it }
+    // Every item with its section and index, outflows before inflows.
+    val allItems = (listOf(Section.EXPENSES, Section.DEBTS, Section.TAXES)
+        .flatMap { section -> viewModel.items(section).withIndex().map { section to it } })
+        .sortedBy { it.second.value.inflow }
 
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -451,7 +453,8 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
             }
         }
 
-        listOf("Outflows" to outflows, "Inflows" to inflows).forEach { (title, rows) ->
+        listOf("Fatura" to true, "Non-fatura" to false).forEach { (title, fatura) ->
+            val rows = allItems.filter { it.second.value.isFatura == fatura }
             item(key = title) {
                 ReportCard("$title (${rows.size})") {
                     if (rows.isEmpty()) Text("None yet.", style = MaterialTheme.typography.bodySmall)
@@ -496,13 +499,13 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
 
 }
 
-/** Name with category, day or fatura, and amounts on a second line; tap to edit. */
+/** Name with category, day and default on a second line, and this month's signed amount; tap to edit. */
 @Composable
 private fun ManagedItemRow(item: DraftItem, kind: String?, defaultAmount: String?, onEdit: () -> Unit, onDelete: () -> Unit) {
     val details = listOfNotNull(
         kind,
-        if (item.isFatura) "fatura" else item.day?.let { "day $it" } ?: "no day",
-        money(amountOf(item)) + if (defaultAmount != null) " (default ${money(BudgetDraft.parseAmount(defaultAmount))})" else "",
+        if (item.isFatura) null else item.day?.let { "day $it" } ?: "no day",
+        defaultAmount?.let { "default ${money(BudgetDraft.parseAmount(it))}" },
         if (item.oneOff) "one-off" else null,
     ).joinToString(" · ")
     Row(Modifier.fillMaxWidth().clickable(onClick = onEdit), verticalAlignment = Alignment.CenterVertically) {
@@ -510,6 +513,13 @@ private fun ManagedItemRow(item: DraftItem, kind: String?, defaultAmount: String
             Text(item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        // Inflows in green, outflows in red.
+        Text(
+            signed(amountOf(item), item.inflow),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = if (item.inflow) Green500 else Red500,
+        )
         IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Edit ${item.name}") }
         IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete ${item.name}", tint = MaterialTheme.colorScheme.error) }
     }
