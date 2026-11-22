@@ -27,7 +27,7 @@ data class BudgetDraft(
     val debts: List<DraftItem>,
     val taxes: List<DraftItem>,
 ) {
-    fun toMonth(faturaDay: Int) = BudgetMonth(
+    fun toMonth(faturaDay: Int, proventosDay: Int? = null) = BudgetMonth(
         salary = parseAmount(salary),
         leftover = parseAmount(leftover),
         proventos = parseAmount(proventos),
@@ -36,6 +36,7 @@ data class BudgetDraft(
         debts = debts.map { DebtTaxItem(it.name, parseAmount(it.amount), it.day, it.isFatura) },
         taxes = taxes.map { DebtTaxItem(it.name, parseAmount(it.amount), it.day, it.isFatura) },
         faturaDay = faturaDay,
+        proventosDay = proventosDay,
     )
 
     /**

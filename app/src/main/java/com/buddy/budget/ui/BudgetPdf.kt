@@ -49,7 +49,7 @@ class BudgetPdf(
                 "Leftover from last month" to money(month.leftover),
                 "Inflows" to "+ ${money(report.totalInflow)}",
                 "Outflows" to "− ${money(report.totalOutflow)}",
-                "Fatura (net)" to money(report.totalFatura),
+                "Fatura" to money(report.totalFatura),
                 (if (free) "Free to spend" to money(report.balance) else "Deficit" to "− ${money(abs(report.balance))}"),
             ),
         )
@@ -77,8 +77,7 @@ class BudgetPdf(
         report.faturaItems.filter { it.amount > 0 }.forEach { rows += listOf(it.name, Category.label(it.category), if (it.inflow) "in" else "out", signed(it.amount, it.inflow)) }
         report.faturaDebts.filter { it.amount > 0 }.forEach { rows += listOf(it.name, "Debt", "out", signed(it.amount, inflow = false)) }
         report.faturaTaxes.filter { it.amount > 0 }.forEach { rows += listOf(it.name, "Taxes", "out", signed(it.amount, inflow = false)) }
-        if (month.proventos > 0) rows += listOf("Proventos", "", "in", signed(month.proventos, inflow = true))
-        rows += listOf("Total (net)", "", "", money(report.totalFatura))
+        rows += listOf("Total", "", "", money(report.totalFatura))
         table(listOf("Item", "Category", "Flow", "Amount"), rows)
     }
 

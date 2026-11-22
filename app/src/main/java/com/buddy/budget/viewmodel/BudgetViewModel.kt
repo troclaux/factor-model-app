@@ -41,7 +41,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
     val expandedCategories = mutableStateMapOf<String, Boolean>()
 
-    val month by derivedStateOf { draft.toMonth(config.faturaDebitDay) }
+    val month by derivedStateOf { draft.toMonth(config.faturaDebitDay, config.proventos.day) }
     val report by derivedStateOf { buildBudgetReport(month) }
     val previous by derivedStateOf { BudgetHistory.previousEntry(history, LocalDate.now()) }
     val changesVsLast by derivedStateOf { BudgetHistory.changesVsLast(previous, month) }

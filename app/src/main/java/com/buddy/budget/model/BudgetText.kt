@@ -27,7 +27,6 @@ object BudgetText {
         report.faturaItems.filter { it.amount > 0 }.forEach { appendLine(line(it.name, short(it.category), if (it.inflow) "+" else "-", it.amount)) }
         report.faturaDebts.filter { it.amount > 0 }.forEach { appendLine(line(it.name, "Dbt", "-", it.amount)) }
         report.faturaTaxes.filter { it.amount > 0 }.forEach { appendLine(line(it.name, "Tax", "-", it.amount)) }
-        if (month.proventos > 0) appendLine(line("Proventos", "", "+", month.proventos))
         appendLine("  $rule")
         appendLine("  ${"Total".padEnd(29)} ${money(report.totalFatura)}")
 

@@ -16,6 +16,8 @@ data class BudgetMonth(
     val debts: List<DebtTaxItem>,
     val taxes: List<DebtTaxItem>,
     val faturaDay: Int,
+    /** Day the proventos arrive, for the timeline; null lists them last. */
+    val proventosDay: Int? = null,
 ) {
     /** With a lump sum the individual fatura expenses are skipped, as in budget.py. */
     val activeExpenses: List<ExpenseItem> get() = if (faturaLump != null) expenses.filter { !it.isFatura } else expenses
@@ -32,7 +34,7 @@ data class BudgetReport(
     val faturaTaxes: List<DebtTaxItem>,
     val totalFaturaOut: Double,
     val totalFaturaIn: Double,
-    /** Net fatura bill: outflows minus inflows (proventos included). */
+    /** Net fatura bill: outflows minus fatura inflows. Proventos are a separate inflow, not part of it. */
     val totalFatura: Double,
     /** Net non-fatura expenses (debts and taxes excluded). */
     val totalNonFatura: Double,
@@ -44,7 +46,7 @@ data class BudgetReport(
     val timeline: List<TimelineEntry>,
 )
 
-/** Port of budget.py's build_report totals. */
+/** Port of budget.py's build_report totals, except that proventos are not netted into the fatura. */
 fun buildBudgetReport(month: BudgetMonth): BudgetReport {
     val expenses = month.activeExpenses
     val faturaItems = expenses.filter { it.isFatura }
@@ -57,11 +59,11 @@ fun buildBudgetReport(month: BudgetMonth): BudgetReport {
     val expenseFaturaOut = month.faturaLump ?: faturaItems.filter { !it.inflow }.sumOf { it.amount }
     val expenseFaturaIn = if (month.faturaLump != null) 0.0 else faturaItems.filter { it.inflow }.sumOf { it.amount }
     val totalFaturaOut = expenseFaturaOut + faturaDebts.sumOf { it.amount } + faturaTaxes.sumOf { it.amount }
-    val totalFaturaIn = expenseFaturaIn + month.proventos
+    val totalFaturaIn = expenseFaturaIn
     val nonFaturaOut = nonFaturaItems.filter { !it.inflow }.sumOf { it.amount }
     val nonFaturaIn = nonFaturaItems.filter { it.inflow }.sumOf { it.amount }
     val totalOutflow = totalFaturaOut + nonFaturaOut + nonFaturaDebts.sumOf { it.amount } + nonFaturaTaxes.sumOf { it.amount }
-    val totalInflow = totalFaturaIn + nonFaturaIn
+    val totalInflow = totalFaturaIn + nonFaturaIn + month.proventos
 
     val byCategory = linkedMapOf<String, Double>()
     expenses.filter { !it.inflow }.forEach { byCategory[it.category] = (byCategory[it.category] ?: 0.0) + it.amount }
@@ -70,7 +72,8 @@ fun buildBudgetReport(month: BudgetMonth): BudgetReport {
 
     val totalFatura = totalFaturaOut - totalFaturaIn
     val dated = nonFaturaItems.map { TimelineEntry(it.day, it.name, it.amount, it.inflow, isFatura = false) } +
-        (nonFaturaDebts + nonFaturaTaxes).map { TimelineEntry(it.day, it.name, it.amount, inflow = false, isFatura = false) }
+        (nonFaturaDebts + nonFaturaTaxes).map { TimelineEntry(it.day, it.name, it.amount, inflow = false, isFatura = false) } +
+        TimelineEntry(month.proventosDay, "Proventos", month.proventos, inflow = true, isFatura = false)
     val fatura = if (totalFaturaOut != 0.0 || totalFaturaIn != 0.0) {
         listOf(TimelineEntry(month.faturaDay, "Fatura", abs(totalFatura), inflow = totalFatura < 0, isFatura = true))
     } else {

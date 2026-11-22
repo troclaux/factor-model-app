@@ -611,9 +611,8 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
                 report.faturaItems.filter { it.amount > 0 }.forEach { LineRow("${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow), onEdit = editor(Section.EXPENSES, it.name)) }
                 report.faturaDebts.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Debt", signed(it.amount, inflow = false), onEdit = editor(Section.DEBTS, it.name)) }
                 report.faturaTaxes.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Taxes", signed(it.amount, inflow = false), onEdit = editor(Section.TAXES, it.name)) }
-                if (month.proventos > 0) LineRow("Proventos", signed(month.proventos, inflow = true))
                 HorizontalDivider()
-                LineRow("Total (net)", money(report.totalFatura), emphasize = true)
+                LineRow("Total", money(report.totalFatura), emphasize = true)
             }
         }
 

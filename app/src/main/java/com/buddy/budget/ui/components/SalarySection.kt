@@ -58,7 +58,7 @@ fun SalarySection(
                 draft.proventos,
                 onProventosChange,
                 Modifier.fillMaxWidth(),
-                supporting = "Income received before the fatura debits (e.g. dividends); offsets the fatura",
+                supporting = "Income such as dividends; an inflow of its own, not taken off the fatura",
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

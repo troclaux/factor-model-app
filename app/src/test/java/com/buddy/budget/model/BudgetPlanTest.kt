@@ -30,14 +30,14 @@ class BudgetPlanTest {
         assertEquals(2480.0, report.balance, 1e-9)
         assertEquals(3170.0, report.totalOutflow, 1e-9)
         assertEquals(350.0, report.totalInflow, 1e-9) // fatura inflow 50 + proventos 100 + bonus 200
-        assertEquals(900.0, report.totalFatura, 1e-9) // 800 + 100 + 150 debt − 50 − 100 proventos
+        assertEquals(1000.0, report.totalFatura, 1e-9) // 800 + 100 + 150 debt − 50; proventos are not netted in
         assertEquals(1120.0, report.totalNonFatura, 1e-9) // 1320 out − 200 in
         assertEquals(
             listOf("housing" to 1200.0, "food" to 800.0, "debt" to 650.0, "taxes" to 300.0, "utilities" to 120.0, "health" to 100.0),
             report.byCategory,
         )
         assertEquals(
-            listOf("Emprestimo" to 1, "Aluguel" to 5, "Fatura" to 9, "Energia" to 15, "DARF" to 20, "Bonus 1" to null),
+            listOf("Emprestimo" to 1, "Aluguel" to 5, "Fatura" to 9, "Energia" to 15, "DARF" to 20, "Bonus 1" to null, "Proventos" to null),
             report.timeline.map { it.name to it.day },
         )
     }
@@ -48,6 +48,14 @@ class BudgetPlanTest {
         assertEquals(2330.0, report.balance, 1e-9)
         assertEquals(3270.0, report.totalOutflow, 1e-9)
         assertTrue(report.faturaItems.isEmpty())
+    }
+
+    @Test
+    fun faturaLineIsTheLumpSumAndProventosAreTheirOwnLine() {
+        val month = lump.copy(debts = debts.filter { !it.isFatura }, proventosDay = 9)
+        val timeline = buildBudgetReport(month).timeline
+        assertEquals(TimelineEntry(9, "Fatura", 1000.0, inflow = false, isFatura = true), timeline.single { it.name == "Fatura" })
+        assertEquals(TimelineEntry(9, "Proventos", 100.0, inflow = true, isFatura = false), timeline.single { it.name == "Proventos" })
     }
 
     @Test
