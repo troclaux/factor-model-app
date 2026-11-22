@@ -5,8 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -25,6 +31,7 @@ fun ExpenseRow(
     tag: String,
     onAmountChange: (String) -> Unit,
     onEdit: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -34,7 +41,7 @@ fun ExpenseRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Tapping the name opens the editor for day, fatura and inflow.
+        // Tapping the name or the pencil opens the editor for name, amounts, day and fatura.
         Row(
             modifier = Modifier.weight(1f).clickable(onClick = onEdit).padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -63,7 +70,13 @@ fun ExpenseRow(
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
             ),
-            modifier = Modifier.width(130.dp)
+            modifier = Modifier.width(120.dp)
         )
+        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit $name", Modifier.size(20.dp))
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete $name", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
+        }
     }
 }

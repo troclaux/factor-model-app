@@ -33,19 +33,23 @@ import com.buddy.budget.model.DraftItem
 enum class ItemDialogMode { EDIT, CREATE }
 
 /**
- * Edits an item's name, category, amount, day, fatura and inflow flags (budget.py's "600 n d5 +" modifiers),
+ * Edits an item's name, category, amount, day and fatura flag (budget.py's "600 n d5" modifiers),
  * or creates a new recurring item. Fatura items have no day: they are paid on the fatura debit day.
+ * With a [defaultAmount] the item is recurring: the dialog also edits its default amount, and saving
+ * writes name, category, day and fatura to the defaults too.
  */
 @Composable
 fun ItemEditDialog(
     item: DraftItem,
     title: String,
     mode: ItemDialogMode,
-    allowInflow: Boolean,
-    allowCategory: Boolean,
+    /** Categories to pick from; null hides the picker. */
+    categories: List<Category>?,
+    defaultAmount: String?,
     isNameTaken: (String) -> Boolean,
     onDismiss: () -> Unit,
-    onSave: (DraftItem) -> Unit,
+    /** The edited item and the edited default amount (null when the item has none). */
+    onSave: (DraftItem, String?) -> Unit,
     onRemove: (() -> Unit)?,
     removeLabel: String = "Remove",
 ) {
@@ -53,7 +57,7 @@ fun ItemEditDialog(
     var amount by remember { mutableStateOf(item.amount) }
     var day by remember { mutableStateOf(item.day?.toString() ?: "") }
     var isFatura by remember { mutableStateOf(item.isFatura) }
-    var inflow by remember { mutableStateOf(item.inflow) }
+    var defaultValue by remember { mutableStateOf(defaultAmount) }
     var category by remember { mutableStateOf(item.category) }
     val parsedDay = day.trim().toIntOrNull()
     val dayValid = day.isBlank() || parsedDay in 1..31
@@ -77,16 +81,9 @@ fun ItemEditDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (allowCategory) CategoryPicker(category) { category = it }
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount") },
-                    prefix = { Text("R$ ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (categories != null) CategoryPicker(category, categories) { category = it }
+                AmountField(if (defaultValue != null) "This month" else "Amount", amount) { amount = it }
+                defaultValue?.let { value -> AmountField("Default", value) { defaultValue = it } }
                 OutlinedTextField(
                     value = if (isFatura) "" else day,
                     onValueChange = { day = it },
@@ -99,11 +96,10 @@ fun ItemEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 SwitchRow("On the credit card (fatura)", isFatura) { isFatura = it }
-                if (allowInflow) SwitchRow("Inflow (adds to the balance)", inflow) { inflow = it }
                 val note = when {
                     mode == ItemDialogMode.CREATE -> "Added to your defaults and to this month."
-                    item.oneOff -> "Only for this month."
-                    else -> "Name and category also change your defaults. Amount, day and flags apply to this month; use Save as defaults to keep them."
+                    defaultValue == null -> "Only for this month."
+                    else -> "\"This month\" applies to this month only. Name, category, default, day and fatura are saved to your defaults."
                 }
                 Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -118,9 +114,9 @@ fun ItemEditDialog(
                             amount = amount,
                             day = if (isFatura) null else parsedDay,
                             isFatura = isFatura,
-                            inflow = allowInflow && inflow,
                             category = category,
                         ),
+                        defaultValue,
                     )
                 },
             ) { Text(if (mode == ItemDialogMode.CREATE) "Add" else "Save") }
@@ -134,12 +130,23 @@ fun ItemEditDialog(
     )
 }
 
-/** A button showing the current category that opens a menu of every category. */
 @Composable
-private fun CategoryPicker(selected: String, onSelect: (String) -> Unit) {
+private fun AmountField(label: String, value: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        prefix = { Text("R$ ") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** A button showing the current category that opens a menu of [choices]. */
+@Composable
+private fun CategoryPicker(selected: String, choices: List<Category>, onSelect: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    // Debt and taxes have their own sections; expenses pick from the rest.
-    val choices = Category.entries.filter { it != Category.DEBT && it != Category.TAXES }
     Box {
         OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text("Category: ${Category.label(selected)}") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

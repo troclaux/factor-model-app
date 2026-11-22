@@ -46,13 +46,19 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     val previous by derivedStateOf { BudgetHistory.previousEntry(history, LocalDate.now()) }
     val changesVsLast by derivedStateOf { BudgetHistory.changesVsLast(previous, month) }
 
-    /** Expenses grouped by category in the CLI's category order; fatura items are hidden while a lump sum is used. */
+    /**
+     * Outflow expenses grouped by category in the CLI's category order. Fatura items stay listed (and
+     * editable) while a lump sum is used, though the lump sum replaces them in the totals.
+     */
     val expensesByCategory by derivedStateOf {
         draft.expenses.withIndex()
-            .filter { !(draft.useFaturaLump && it.value.isFatura) }
+            .filter { !it.value.inflow }
             .groupBy { Category.fromString(it.value.category) }
             .toSortedMap(compareBy { it.ordinal })
     }
+
+    /** Inflow expenses (recurring inflows and one-off bonuses), shown in their own group. */
+    val inflows by derivedStateOf { draft.expenses.withIndex().filter { it.value.inflow } }
 
     /** The saved draft if it is for the current month, otherwise a new month from the config. */
     private fun loadOrStartDraft(): BudgetDraft {
@@ -80,18 +86,32 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         Section.TAXES -> draft.taxes
     }
 
+    /** The recurring item's default amount as text, or null when it is not in the defaults. */
+    fun defaultAmount(section: Section, name: String): String? = when (section) {
+        Section.EXPENSES -> config.expenses.find { it.name == name }?.amount
+        Section.DEBTS -> config.debts.find { it.name == name }?.amount
+        Section.TAXES -> config.taxes.find { it.name == name }?.amount
+    }?.let(BudgetDraft::format)
+
     /**
-     * Updates this month's item. Renaming or recategorizing a recurring item also changes it in the
-     * defaults (they are matched by name); amounts, days and flags stay this month's until saved as defaults.
+     * Updates this month's item. With [defaultAmount] (from the edit dialog) a recurring item's defaults
+     * (matched by its old name) also get its name, category, day, fatura flag and that amount.
      */
-    fun updateItem(section: Section, index: Int, item: DraftItem) {
+    fun updateItem(section: Section, index: Int, item: DraftItem, defaultAmount: String? = null) {
         val old = items(section).getOrNull(index) ?: return
-        if (!old.oneOff && (old.name != item.name || old.category != item.category)) {
+        if (!old.oneOff && defaultAmount != null) {
+            val amount = BudgetDraft.parseAmount(defaultAmount)
             updateConfig { config ->
                 when (section) {
-                    Section.EXPENSES -> config.copy(expenses = config.expenses.map { if (it.name == old.name) it.copy(name = item.name, category = item.category) else it })
-                    Section.DEBTS -> config.copy(debts = config.debts.map { if (it.name == old.name) it.copy(name = item.name) else it })
-                    Section.TAXES -> config.copy(taxes = config.taxes.map { if (it.name == old.name) it.copy(name = item.name) else it })
+                    Section.EXPENSES -> config.copy(expenses = config.expenses.map {
+                        if (it.name == old.name) it.copy(name = item.name, amount = amount, day = item.day, category = item.category, isFatura = item.isFatura) else it
+                    })
+                    Section.DEBTS -> config.copy(debts = config.debts.map {
+                        if (it.name == old.name) it.copy(name = item.name, amount = amount, day = item.day, isFatura = item.isFatura) else it
+                    })
+                    Section.TAXES -> config.copy(taxes = config.taxes.map {
+                        if (it.name == old.name) it.copy(name = item.name, amount = amount, day = item.day, isFatura = item.isFatura) else it
+                    })
                 }
             }
         }
@@ -102,17 +122,18 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     fun nameTaken(section: Section, name: String, exceptIndex: Int?): Boolean =
         items(section).withIndex().any { (index, item) -> index != exceptIndex && item.name.equals(name.trim(), ignoreCase = true) }
 
-    /** Adds a recurring item to the defaults and to this month. */
-    fun addRecurring(section: Section, item: DraftItem) {
-        val added = item.copy(
-            name = item.name.trim(),
-            oneOff = false,
-            category = when (section) {
-                Section.EXPENSES -> item.category
-                Section.DEBTS -> "debt"
-                Section.TAXES -> "taxes"
-            },
-        )
+    /** True when any item of this month has this name. */
+    fun nameTakenAnywhere(name: String): Boolean = Section.entries.any { nameTaken(it, name, exceptIndex = null) }
+
+    /** Adds a recurring inflow or outflow to the defaults and to this month; Debt and Taxes outflows go to their own sections. */
+    fun addRecurring(item: DraftItem) {
+        val section = when {
+            item.inflow -> Section.EXPENSES
+            item.category == "debt" -> Section.DEBTS
+            item.category == "taxes" -> Section.TAXES
+            else -> Section.EXPENSES
+        }
+        val added = item.copy(name = item.name.trim(), oneOff = false)
         val amount = BudgetDraft.parseAmount(added.amount)
         updateConfig { config ->
             when (section) {
@@ -122,7 +143,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
         edit { current -> current.withSection(section) { it + added } }
-        if (section == Section.EXPENSES) expandedCategories[Category.fromString(added.category).name] = true else expandedCategories[section.name] = true
+        expandedCategories[if (added.inflow) INFLOWS else if (section == Section.EXPENSES) Category.fromString(added.category).name else section.name] = true
         message = "Added ${added.name} to your defaults."
     }
 
@@ -162,7 +183,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     fun addOneOff(inflow: Boolean) = edit { current ->
         val prefix = if (inflow) "Bonus" else "Expense"
         val number = current.expenses.count { it.oneOff && it.inflow == inflow } + 1
-        expandedCategories[Category.OTHER.name] = true
+        expandedCategories[if (inflow) INFLOWS else Category.OTHER.name] = true
         current.copy(expenses = current.expenses + DraftItem("$prefix $number", "", inflow = inflow, oneOff = true))
     }
 
@@ -203,4 +224,9 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun isCategoryExpanded(category: String): Boolean = expandedCategories[category] ?: false
+
+    companion object {
+        /** Expansion key of the Inflows group. */
+        const val INFLOWS = "INFLOWS"
+    }
 }

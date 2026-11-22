@@ -1,5 +1,6 @@
 package com.buddy.budget.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -24,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
@@ -50,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.buddy.budget.model.BudgetDraft
 import com.buddy.budget.model.BudgetHistory
 import com.buddy.budget.model.BudgetText
 import com.buddy.budget.model.Category
@@ -99,7 +104,7 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
                     )
                 )
                 PrimaryTabRow(selectedTabIndex = viewModel.selectedTab) {
-                    listOf("Plan", "Report", "History").forEachIndexed { index, title ->
+                    listOf("Plan", "Items", "Report", "History").forEachIndexed { index, title ->
                         Tab(selected = viewModel.selectedTab == index, onClick = { viewModel.selectedTab = index }, text = { Text(title) })
                     }
                 }
@@ -111,7 +116,8 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
         val modifier = Modifier.fillMaxSize().padding(padding)
         when (viewModel.selectedTab) {
             0 -> PlanContent(viewModel, modifier)
-            1 -> ReportContent(viewModel, modifier)
+            1 -> ItemsContent(viewModel, modifier)
+            2 -> ReportContent(viewModel, modifier)
             else -> HistoryContent(viewModel, modifier)
         }
     }
@@ -123,7 +129,6 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
 private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
     val draft = viewModel.draft
     var editing by remember { mutableStateOf<Pair<Section, Int>?>(null) }
-    var creating by remember { mutableStateOf<Section?>(null) }
     var deleting by remember { mutableStateOf<Pair<Section, Int>?>(null) }
     var defaultChanges by remember { mutableStateOf<List<DefaultChange>?>(null) }
     var confirmingReset by remember { mutableStateOf(false) }
@@ -152,7 +157,7 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
             item(key = "cat_${category.name}") {
                 CategoryGroup(
                     title = category.label,
-                    total = items.filter { !it.value.inflow }.sumOf { amountOf(it.value) },
+                    total = items.filter { counted(it.value, draft) }.sumOf { amountOf(it.value) },
                     expanded = viewModel.isCategoryExpanded(category.name),
                     onToggle = { viewModel.toggleCategory(category.name) }
                 ) {
@@ -160,9 +165,32 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
                         ExpenseRow(
                             name = item.name,
                             amount = item.amount,
-                            tag = tagFor(item),
+                            tag = tagFor(item, draft.useFaturaLump),
                             onAmountChange = { viewModel.updateItem(Section.EXPENSES, index, item.copy(amount = it)) },
                             onEdit = { editing = Section.EXPENSES to index },
+                            onDelete = { if (item.oneOff) viewModel.removeOneOff(index) else deleting = Section.EXPENSES to index },
+                        )
+                    }
+                }
+            }
+        }
+
+        if (viewModel.inflows.isNotEmpty()) {
+            item(key = BudgetViewModel.INFLOWS) {
+                CategoryGroup(
+                    title = "Inflows",
+                    total = viewModel.inflows.filter { counted(it.value, draft) }.sumOf { amountOf(it.value) },
+                    expanded = viewModel.isCategoryExpanded(BudgetViewModel.INFLOWS),
+                    onToggle = { viewModel.toggleCategory(BudgetViewModel.INFLOWS) }
+                ) {
+                    viewModel.inflows.forEach { (index, item) ->
+                        ExpenseRow(
+                            name = item.name,
+                            amount = item.amount,
+                            tag = tagFor(item, draft.useFaturaLump),
+                            onAmountChange = { viewModel.updateItem(Section.EXPENSES, index, item.copy(amount = it)) },
+                            onEdit = { editing = Section.EXPENSES to index },
+                            onDelete = { if (item.oneOff) viewModel.removeOneOff(index) else deleting = Section.EXPENSES to index },
                         )
                     }
                 }
@@ -183,54 +211,11 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
                             ExpenseRow(
                                 name = item.name,
                                 amount = item.amount,
-                                tag = tagFor(item),
+                                tag = tagFor(item, faturaLump = false),
                                 onAmountChange = { viewModel.updateItem(section, index, item.copy(amount = it)) },
                                 onEdit = { editing = section to index },
+                                onDelete = { deleting = section to index },
                             )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Recurring items", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Add an item to your defaults and this month. Tap an item's name to rename, recategorize or delete it.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(Section.EXPENSES to "Expense", Section.DEBTS to "Debt", Section.TAXES to "Tax").forEach { (section, label) ->
-                            OutlinedButton(onClick = { creating = section }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
-                                Text(label, Modifier.padding(start = 4.dp), maxLines = 1)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("One-off items", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Extra expenses or income for this month only. They go under Other and are never saved as defaults.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { viewModel.addOneOff(inflow = false) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
-                            Text("Expense", Modifier.padding(start = 6.dp))
-                        }
-                        OutlinedButton(onClick = { viewModel.addOneOff(inflow = true) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
-                            Text("Bonus", Modifier.padding(start = 6.dp))
                         }
                     }
                 }
@@ -258,80 +243,7 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item { Spacer(Modifier.height(8.dp)) }
     }
 
-    editing?.let { (section, index) ->
-        val item = viewModel.items(section).getOrNull(index)
-        if (item == null) {
-            editing = null
-        } else {
-            ItemEditDialog(
-                item = item,
-                title = item.name,
-                mode = ItemDialogMode.EDIT,
-                allowInflow = section == Section.EXPENSES,
-                allowCategory = section == Section.EXPENSES,
-                isNameTaken = { name -> viewModel.nameTaken(section, name, exceptIndex = index) },
-                onDismiss = { editing = null },
-                onSave = { updated ->
-                    viewModel.updateItem(section, index, updated)
-                    editing = null
-                },
-                onRemove = if (item.oneOff) {
-                    {
-                        viewModel.removeOneOff(index)
-                        editing = null
-                    }
-                } else {
-                    {
-                        deleting = section to index
-                        editing = null
-                    }
-                },
-                removeLabel = if (item.oneOff) "Remove" else "Delete",
-            )
-        }
-    }
-
-    creating?.let { section ->
-        val noun = when (section) {
-            Section.EXPENSES -> "expense"
-            Section.DEBTS -> "debt"
-            Section.TAXES -> "tax"
-        }
-        ItemEditDialog(
-            item = DraftItem(name = "", amount = ""),
-            title = "New recurring $noun",
-            mode = ItemDialogMode.CREATE,
-            allowInflow = section == Section.EXPENSES,
-            allowCategory = section == Section.EXPENSES,
-            isNameTaken = { name -> viewModel.nameTaken(section, name, exceptIndex = null) },
-            onDismiss = { creating = null },
-            onSave = { item ->
-                viewModel.addRecurring(section, item)
-                creating = null
-            },
-            onRemove = null,
-        )
-    }
-
-    deleting?.let { (section, index) ->
-        val name = viewModel.items(section).getOrNull(index)?.name
-        if (name == null) {
-            deleting = null
-        } else {
-            AlertDialog(
-                onDismissRequest = { deleting = null },
-                title = { Text("Delete $name?") },
-                text = { Text("It is removed from your defaults and from this month. Saved months in History keep it.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.removeRecurring(section, index)
-                        deleting = null
-                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
-                },
-                dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
-            )
-        }
-    }
+    ItemDialogs(viewModel, editing, { editing = it }, deleting, { deleting = it })
 
     defaultChanges?.let { changes -> DefaultsDialog(changes, onDismiss = { defaultChanges = null }) { chosen ->
         viewModel.saveDefaults(chosen)
@@ -363,6 +275,69 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
             confirmButton = { TextButton(onClick = { viewModel.resetMonth(); confirmingReset = false }) { Text("Reset") } },
             dismissButton = { TextButton(onClick = { confirmingReset = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/** The edit dialog for [editing] and the delete confirmation for [deleting], shared by the Plan and Report tabs. */
+@Composable
+private fun ItemDialogs(
+    viewModel: BudgetViewModel,
+    editing: Pair<Section, Int>?,
+    onEditingChange: (Pair<Section, Int>?) -> Unit,
+    deleting: Pair<Section, Int>?,
+    onDeletingChange: (Pair<Section, Int>?) -> Unit,
+) {
+    editing?.let { (section, index) ->
+        val item = viewModel.items(section).getOrNull(index)
+        if (item == null) {
+            onEditingChange(null)
+        } else {
+            ItemEditDialog(
+                item = item,
+                title = item.name,
+                mode = ItemDialogMode.EDIT,
+                categories = if (section == Section.EXPENSES && !item.inflow) expenseCategories else null,
+                defaultAmount = if (item.oneOff) null else viewModel.defaultAmount(section, item.name),
+                isNameTaken = { name -> viewModel.nameTaken(section, name, exceptIndex = index) },
+                onDismiss = { onEditingChange(null) },
+                onSave = { updated, defaultAmount ->
+                    viewModel.updateItem(section, index, updated, defaultAmount)
+                    onEditingChange(null)
+                },
+                onRemove = if (item.oneOff) {
+                    {
+                        viewModel.removeOneOff(index)
+                        onEditingChange(null)
+                    }
+                } else {
+                    {
+                        onDeletingChange(section to index)
+                        onEditingChange(null)
+                    }
+                },
+                removeLabel = if (item.oneOff) "Remove" else "Delete",
+            )
+        }
+    }
+
+    deleting?.let { (section, index) ->
+        val name = viewModel.items(section).getOrNull(index)?.name
+        if (name == null) {
+            onDeletingChange(null)
+        } else {
+            AlertDialog(
+                onDismissRequest = { onDeletingChange(null) },
+                title = { Text("Delete $name?") },
+                text = { Text("It is removed from your defaults and from this month. Saved months in History keep it.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.removeRecurring(section, index)
+                        onDeletingChange(null)
+                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { onDeletingChange(null) }) { Text("Cancel") } },
+            )
+        }
     }
 }
 
@@ -402,13 +377,143 @@ private fun DefaultsDialog(changes: List<DefaultChange>, onDismiss: () -> Unit, 
     )
 }
 
+/** Categories an expense can be edited to; Debt and Taxes are separate sections. */
+private val expenseCategories = Category.entries.filter { it != Category.DEBT && it != Category.TAXES }
+
 private fun amountOf(item: DraftItem) = item.amount.trim().replace(",", ".").toDoubleOrNull() ?: 0.0
 
-private fun tagFor(item: DraftItem) = listOfNotNull(
-    if (item.isFatura) "fatura" else item.day?.let { "d$it" },
+/** Whether an expense row counts in its group's total: with a fatura lump sum, fatura items do not. */
+private fun counted(item: DraftItem, draft: BudgetDraft) = !(draft.useFaturaLump && item.isFatura)
+
+/** With a fatura lump sum, fatura items are marked as part of that total. */
+private fun tagFor(item: DraftItem, faturaLump: Boolean) = listOfNotNull(
+    if (item.isFatura) (if (faturaLump) "fatura (in total)" else "fatura") else item.day?.let { "d$it" },
     if (item.inflow) "inflow" else null,
     if (item.oneOff) "one-off" else null,
 ).joinToString(" · ")
+
+// ---------- Items ----------
+
+/** Every inflow and outflow of this month in one list, to add, edit or delete them. */
+@Composable
+private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
+    var editing by remember { mutableStateOf<Pair<Section, Int>?>(null) }
+    var deleting by remember { mutableStateOf<Pair<Section, Int>?>(null) }
+    // True while adding a recurring inflow, false for an outflow.
+    var creatingInflow by remember { mutableStateOf<Boolean?>(null) }
+    val expenses = viewModel.draft.expenses.withIndex()
+    val outflows = expenses.filter { !it.value.inflow }.map { Section.EXPENSES to it } +
+        listOf(Section.DEBTS, Section.TAXES).flatMap { section -> viewModel.items(section).withIndex().map { section to it } }
+    val inflows = expenses.filter { it.value.inflow }.map { Section.EXPENSES to it }
+
+    LazyColumn(modifier = modifier, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Recurring items", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Added to your defaults and to this month.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(false to "Outflow", true to "Inflow").forEach { (inflow, label) ->
+                            OutlinedButton(onClick = { creatingInflow = inflow }, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
+                                Text(label, Modifier.padding(start = 4.dp), maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("One-off items", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Extra expenses or income for this month only. Expenses go under Other, bonuses under Inflows; they are never saved as defaults.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { viewModel.addOneOff(inflow = false) }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
+                            Text("Expense", Modifier.padding(start = 6.dp))
+                        }
+                        OutlinedButton(onClick = { viewModel.addOneOff(inflow = true) }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
+                            Text("Bonus", Modifier.padding(start = 6.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        listOf("Outflows" to outflows, "Inflows" to inflows).forEach { (title, rows) ->
+            item(key = title) {
+                ReportCard("$title (${rows.size})") {
+                    if (rows.isEmpty()) Text("None yet.", style = MaterialTheme.typography.bodySmall)
+                    rows.forEach { (section, indexed) ->
+                        val (index, item) = indexed
+                        ManagedItemRow(
+                            item = item,
+                            kind = when (section) {
+                                Section.EXPENSES -> if (item.inflow) null else Category.label(item.category)
+                                Section.DEBTS -> "Debt"
+                                Section.TAXES -> "Taxes"
+                            },
+                            defaultAmount = if (item.oneOff) null else viewModel.defaultAmount(section, item.name),
+                            onEdit = { editing = section to index },
+                            onDelete = { if (item.oneOff) viewModel.removeOneOff(index) else deleting = section to index },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    ItemDialogs(viewModel, editing, { editing = it }, deleting, { deleting = it })
+
+    creatingInflow?.let { inflow ->
+        ItemEditDialog(
+            item = DraftItem(name = "", amount = "", inflow = inflow),
+            title = if (inflow) "New recurring inflow" else "New recurring outflow",
+            mode = ItemDialogMode.CREATE,
+            // Debt and Taxes outflows go to their own sections.
+            categories = if (inflow) null else Category.entries,
+            defaultAmount = null,
+            isNameTaken = viewModel::nameTakenAnywhere,
+            onDismiss = { creatingInflow = null },
+            onSave = { item, _ ->
+                viewModel.addRecurring(item)
+                creatingInflow = null
+            },
+            onRemove = null,
+        )
+    }
+
+}
+
+/** Name with category, day or fatura, and amounts on a second line; tap to edit. */
+@Composable
+private fun ManagedItemRow(item: DraftItem, kind: String?, defaultAmount: String?, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val details = listOfNotNull(
+        kind,
+        if (item.isFatura) "fatura" else item.day?.let { "day $it" } ?: "no day",
+        money(amountOf(item)) + if (defaultAmount != null) " (default ${money(BudgetDraft.parseAmount(defaultAmount))})" else "",
+        if (item.oneOff) "one-off" else null,
+    ).joinToString(" · ")
+    Row(Modifier.fillMaxWidth().clickable(onClick = onEdit), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Edit ${item.name}") }
+        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete ${item.name}", tint = MaterialTheme.colorScheme.error) }
+    }
+}
 
 // ---------- Report ----------
 
@@ -421,6 +526,12 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
     var exporting by remember { mutableStateOf(false) }
     val previousMonth = viewModel.previous?.monthKey
     fun text() = BudgetText.report(report, viewModel.changesVsLast, previousMonth)
+    var editing by remember { mutableStateOf<Pair<Section, Int>?>(null) }
+    var deleting by remember { mutableStateOf<Pair<Section, Int>?>(null) }
+    // Opens the editor for this month's item with that name.
+    fun editor(section: Section, name: String): () -> Unit = {
+        viewModel.items(section).indexOfFirst { it.name == name }.takeIf { it >= 0 }?.let { editing = section to it }
+    }
 
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -487,9 +598,9 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             ReportCard("Fatura · day ${month.faturaDay}") {
                 month.faturaLump?.let { LineRow("Lump sum", signed(it, inflow = false)) }
-                report.faturaItems.filter { it.amount > 0 }.forEach { LineRow("${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow)) }
-                report.faturaDebts.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Debt", signed(it.amount, inflow = false)) }
-                report.faturaTaxes.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Taxes", signed(it.amount, inflow = false)) }
+                report.faturaItems.filter { it.amount > 0 }.forEach { LineRow("${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow), onEdit = editor(Section.EXPENSES, it.name)) }
+                report.faturaDebts.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Debt", signed(it.amount, inflow = false), onEdit = editor(Section.DEBTS, it.name)) }
+                report.faturaTaxes.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Taxes", signed(it.amount, inflow = false), onEdit = editor(Section.TAXES, it.name)) }
                 if (month.proventos > 0) LineRow("Proventos", signed(month.proventos, inflow = true))
                 HorizontalDivider()
                 LineRow("Total (net)", money(report.totalFatura), emphasize = true)
@@ -499,19 +610,19 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             ReportCard("Non-fatura") {
                 report.nonFaturaItems.filter { it.amount > 0 }.sortedBy { it.day ?: 32 }.forEach {
-                    LineRow("${BudgetText.dayLabel(it.day)}  ${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow))
+                    LineRow("${BudgetText.dayLabel(it.day)}  ${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow), onEdit = editor(Section.EXPENSES, it.name))
                 }
                 HorizontalDivider()
                 LineRow("Total (net)", money(report.totalNonFatura), emphasize = true)
             }
         }
 
-        listOf("Debts" to month.debts, "Taxes" to month.taxes).forEach { (title, items) ->
+        listOf(Triple("Debts", month.debts, Section.DEBTS), Triple("Taxes", month.taxes, Section.TAXES)).forEach { (title, items, section) ->
             if (items.any { it.amount > 0 }) {
                 item {
                     ReportCard(title) {
                         items.filter { it.amount > 0 }.sortedBy { it.day ?: 32 }.forEach {
-                            LineRow("${BudgetText.dayLabel(it.day)}  ${it.name}${if (it.isFatura) " · fatura" else ""}", money(it.amount))
+                            LineRow("${BudgetText.dayLabel(it.day)}  ${it.name}${if (it.isFatura) " · fatura" else ""}", money(it.amount), onEdit = editor(section, it.name))
                         }
                         HorizontalDivider()
                         LineRow("Total", money(items.sumOf { it.amount }), emphasize = true)
@@ -540,6 +651,8 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
             }
         }
     }
+
+    ItemDialogs(viewModel, editing, { editing = it }, deleting, { deleting = it })
 }
 
 // ---------- History ----------
@@ -625,11 +738,15 @@ private fun LineRow(
     value: String,
     emphasize: Boolean = false,
     color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    /** When set, the row is tappable and shows a pencil. */
+    onEdit: (() -> Unit)? = null,
 ) {
     val weight = if (emphasize) FontWeight.SemiBold else FontWeight.Normal
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    val rowModifier = if (onEdit != null) Modifier.fillMaxWidth().clickable(onClick = onEdit) else Modifier.fillMaxWidth()
+    Row(rowModifier, verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, color = color)
+        if (onEdit != null) Icon(Icons.Default.Edit, contentDescription = "Edit", Modifier.padding(start = 8.dp).size(16.dp), tint = MaterialTheme.colorScheme.outline)
     }
 }
 
