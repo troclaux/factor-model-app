@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.abs
+import com.buddy.budget.i18n.tr
 
 /** One month's plan: the config defaults with this month's edits. Mirrors a budget.py session. */
 data class BudgetMonth(
@@ -136,8 +137,8 @@ data class HistoryItem(
 )
 
 data class AmountChange(val name: String, val old: Double, val new: Double) {
-    /** "+12.5%", or "new" when the old amount was zero. */
-    val percent: String get() = if (old != 0.0) "%+.1f%%".format((new - old) / old * 100) else "new"
+    /** "+12.5%", or tr("new") when the old amount was zero. */
+    val percent: String get() = if (old != 0.0) "%+.1f%%".format((new - old) / old * 100) else tr("new")
 }
 
 /** A default that differs from this month's value; [apply] writes it into the config. */
@@ -214,17 +215,17 @@ object BudgetHistory {
     fun findDefaultChanges(config: BudgetConfig, month: BudgetMonth): List<DefaultChange> {
         val changes = mutableListOf<DefaultChange>()
         if (month.salary != config.income) {
-            changes += DefaultChange("Net salary: ${number(config.income)} → ${number(month.salary)}") { it.copy(income = month.salary) }
+            changes += DefaultChange(tr("Net salary: %s → %s").format(number(config.income), number(month.salary))) { it.copy(income = month.salary) }
         }
         if (month.proventos != config.proventos.amount) {
-            changes += DefaultChange("Proventos: ${number(config.proventos.amount)} → ${number(month.proventos)}") {
+            changes += DefaultChange(tr("Proventos: %s → %s").format(number(config.proventos.amount), number(month.proventos))) {
                 it.copy(proventos = it.proventos.copy(amount = month.proventos))
             }
         }
         month.activeExpenses.forEach { item ->
             val base = config.expenses.find { it.name == item.name } ?: return@forEach
             val diffs = describe(base.amount, item.amount, base.day, item.day, base.isFatura, item.isFatura) +
-                listOfNotNull(if (base.inflow != item.inflow) "inflow ${base.inflow} → ${item.inflow}" else null)
+                listOfNotNull(if (base.inflow != item.inflow) tr("inflow %s → %s").format(yesNo(base.inflow), yesNo(item.inflow)) else null)
             if (diffs.isNotEmpty()) {
                 changes += DefaultChange("${item.name}: ${diffs.joinToString()}") { config ->
                     config.copy(expenses = config.expenses.map {
@@ -252,10 +253,12 @@ object BudgetHistory {
 
     private fun describe(oldAmount: Double, newAmount: Double, oldDay: Int?, newDay: Int?, oldFatura: Boolean, newFatura: Boolean) =
         listOfNotNull(
-            if (oldAmount != newAmount) "amount ${number(oldAmount)} → ${number(newAmount)}" else null,
-            if (oldDay != newDay) "day ${oldDay ?: "none"} → ${newDay ?: "none"}" else null,
-            if (oldFatura != newFatura) "fatura $oldFatura → $newFatura" else null,
+            if (oldAmount != newAmount) tr("amount %s → %s").format(number(oldAmount), number(newAmount)) else null,
+            if (oldDay != newDay) tr("day %s → %s").format(oldDay ?: tr("none"), newDay ?: tr("none")) else null,
+            if (oldFatura != newFatura) tr("fatura %s → %s").format(yesNo(oldFatura), yesNo(newFatura)) else null,
         )
+
+    private fun yesNo(value: Boolean) = tr(if (value) "yes" else "no")
 
     private fun number(value: Double) = value.toBigDecimal().stripTrailingZeros().toPlainString()
 

@@ -19,6 +19,7 @@ import com.buddy.budget.portfolio.model.PortfolioSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.buddy.budget.i18n.tr
 
 /** Records what the modifier's content draws into [layer] so it can be exported later. */
 fun Modifier.recordInto(layer: GraphicsLayer): Modifier = drawWithContent {
@@ -29,13 +30,13 @@ fun Modifier.recordInto(layer: GraphicsLayer): Modifier = drawWithContent {
 fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(ClipboardManager::class.java)
     clipboard.setPrimaryClip(ClipData.newPlainText("Portfolio analysis", text))
-    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, tr("Copied to clipboard"), Toast.LENGTH_SHORT).show()
 }
 
 /** Shares the text as a .txt file attachment only. */
 fun shareText(context: Context, text: String, fileName: String) {
     val file = sharedFile(context, fileName).apply { writeText(text) }
-    shareFile(context, file, "text/plain", "Share analysis")
+    shareFile(context, file, "text/plain", tr("Share analysis"))
 }
 
 /** Writes the styled PDF report off the main thread, then shares it. */
@@ -49,7 +50,7 @@ suspend fun sharePdf(
 ) {
     val file = sharedFile(context, fileName)
     withContext(Dispatchers.Default) { PdfReport(context, result, settings, riskAversion, capital).writeTo(file) }
-    shareFile(context, file, "application/pdf", "Share PDF report")
+    shareFile(context, file, "application/pdf", tr("Share PDF report"))
 }
 
 fun shareFile(context: Context, file: File, mimeType: String, title: String) {
@@ -71,7 +72,7 @@ fun shareImage(context: Context, image: ImageBitmap, background: Int, fileName: 
     }
     val file = sharedFile(context, fileName)
     file.outputStream().use { opaque.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    shareFile(context, file, "image/png", "Share chart")
+    shareFile(context, file, "image/png", tr("Share chart"))
 }
 
 /** A file in the cache folder that FileProvider shares. */

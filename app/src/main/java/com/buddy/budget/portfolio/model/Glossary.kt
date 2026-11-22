@@ -1,11 +1,17 @@
 package com.buddy.budget.portfolio.model
 
+import com.buddy.budget.i18n.AppLanguage
+import com.buddy.budget.i18n.Language
+
 /** Plain-language explanations of every parameter and metric, shown at the end of the results and the PDF. */
 object Glossary {
 
     data class Entry(val term: String, val explanation: String)
 
-    val parameters = listOf(
+    val parameters: List<Entry> get() = if (AppLanguage.current == Language.PT) portugueseParameters else englishParameters
+    val metrics: List<Entry> get() = if (AppLanguage.current == Language.PT) portugueseMetrics else englishMetrics
+
+    private val englishParameters = listOf(
         Entry(
             "Tickers",
             "The assets analysed. B3 tickers need the .SA suffix (PETR4.SA). Prices are Yahoo Finance closes adjusted " +
@@ -58,7 +64,7 @@ object Glossary {
         ),
     )
 
-    val metrics = listOf(
+    private val englishMetrics = listOf(
         Entry(
             "Observations",
             "The number of returns in the window. Each return is the change from one price to the next: " +
@@ -134,6 +140,138 @@ object Glossary {
             "Capital allocation",
             "Target: money for each asset (capital × tangency share × weight). Shares: target ÷ last price, rounded down. " +
                 "Cost: shares × price. Leftover: cash not spent because of rounding.",
+        ),
+    )
+
+    private val portugueseParameters = listOf(
+        Entry(
+            "Tickers",
+            "Os ativos analisados. Tickers da B3 precisam do sufixo .SA (PETR4.SA). Os preços são fechamentos do Yahoo Finance " +
+                "ajustados por dividendos e desdobramentos, então os retornos incluem o que você teria recebido.",
+        ),
+        Entry(
+            "Índice de referência",
+            "O índice que representa \"o mercado\" no cálculo dos betas de mercado, ex. ^BVSP (Ibovespa) ou SPY. " +
+                "Deixe em branco para não calcular betas de mercado.",
+        ),
+        Entry(
+            "Taxa livre de risco",
+            "O retorno anual de um ativo sem risco, como Selic/CDI ou um título público de curto prazo. Todo \"retorno " +
+                "excedente\" abaixo é medido acima dela, e é onde começa a Linha de Mercado de Capitais. Com CDI ou Selic como " +
+                "referência, o app usa a taxa anualizada mais recente do Banco Central antes do fim da janela; com um ticker de " +
+                "juros do Yahoo (ex. ^IRX), o último fechamento desse juro. Escolha um prazo compatível com seu horizonte de investimento.",
+        ),
+        Entry(
+            "Período",
+            "O histórico de preços usado em todas as estimativas. A janela conta para trás a partir do último pregão do mês " +
+                "anterior; Datas usa seu início e fim (ou o fechamento mais recente). Um período maior dá mais dados, mas mistura " +
+                "condições de mercado antigas que podem não valer mais.",
+        ),
+        Entry(
+            "Frequência dos retornos",
+            "Com que frequência os preços são amostrados: diária (252 períodos por ano), semanal (52) ou mensal (12). Semanal e " +
+                "mensal usam o último fechamento de cada semana ou mês. Frequência maior dá mais observações no mesmo período; " +
+                "dados diários são mais ruidosos e podem subestimar a correlação entre ações pouco negociadas.",
+        ),
+        Entry(
+            "Venda a descoberto",
+            "Quando permitida, os pesos podem ser negativos: vender ações emprestadas para financiar posições maiores em outros " +
+                "ativos. Quando proibida, todo peso é pelo menos 0%, que é como a maioria dos investidores pessoa física investe.",
+        ),
+        Entry(
+            "Aversão ao risco (A)",
+            "O quanto você não gosta de risco. A fatia ideal do seu dinheiro na carteira de tangência é " +
+                "(E[r_T] − rf) / (A × σ_T²); o resto vai para o ativo livre de risco. A ≥ 5 é conservador, perto de 2 " +
+                "moderado, 1 ou menos arrojado.",
+        ),
+        Entry(
+            "Capital",
+            "O valor que você quer investir. Ele é dividido entre o ativo livre de risco e a carteira de tangência (usando " +
+                "A se definido, senão 100% na carteira de tangência) e convertido em ações inteiras ao último fechamento.",
+        ),
+        Entry(
+            "Minha carteira e Carteira hipotética",
+            "Carteiras para comparar com a carteira de tangência. As quantidades de ações viram pesos pelo valor de mercado " +
+                "(ações × último preço ÷ total), não pelo número de ações.",
+        ),
+    )
+
+    private val portugueseMetrics = listOf(
+        Entry(
+            "Observações",
+            "O número de retornos na janela. Cada retorno é a variação de um preço para o seguinte: " +
+                "P(t) / P(t−1) − 1. Menos de cerca de 60 deixa todas as estimativas pouco confiáveis.",
+        ),
+        Entry(
+            "Retorno esperado (E[r])",
+            "O retorno médio por período vezes os períodos por ano (ex. retorno médio mensal × 12). É uma média " +
+                "histórica, não uma previsão, e é o dado mais ruidoso de todos.",
+        ),
+        Entry(
+            "Volatilidade (σ)",
+            "O desvio-padrão anualizado dos retornos: o quanto os retornos oscilam em torno da média. Desvio-padrão " +
+                "do período × √(períodos por ano). É a medida de risco usada em todo o app.",
+        ),
+        Entry(
+            "Covariância e correlação",
+            "Como dois ativos se movem juntos. A correlação escala a covariância entre −1 (sempre opostos) e +1 " +
+                "(sempre juntos); 0 significa sem relação. Correlações baixas ou negativas são o que faz a diversificação reduzir o risco.",
+        ),
+        Entry(
+            "Índice de Sharpe",
+            "(E[r] − rf) / σ: o retorno extra acima da taxa livre de risco por unidade de volatilidade. Quanto maior, melhor; é " +
+                "a inclinação da reta que vai da taxa livre de risco até a carteira no diagrama.",
+        ),
+        Entry(
+            "Carteira de tangência",
+            "A combinação dos seus ativos com o maior índice de Sharpe possível. Com venda a descoberto os pesos são " +
+                "Σ⁻¹(μ − rf), escalados para somar 100%; sem vendas a descoberto o app encontra numericamente os melhores pesos só comprados.",
+        ),
+        Entry(
+            "Fronteira eficiente",
+            "A menor volatilidade possível para cada nível de retorno esperado. A parte contínua, acima do ponto de " +
+                "variância mínima, é eficiente; a parte tracejada abaixo dá menos retorno para o mesmo risco.",
+        ),
+        Entry(
+            "Linha de Mercado de Capitais (LMC)",
+            "A reta E[r] = rf + Sharpe_T × σ da taxa livre de risco até a carteira de tangência. Cada ponto é uma " +
+                "mistura das duas, e essas misturas superam qualquer outra carteira de mesmo risco. Ela supõe que você pode tomar " +
+                "emprestado à taxa livre de risco, o que na prática custa mais.",
+        ),
+        Entry(
+            "Fatia de tangência e fatia livre de risco",
+            "Para um dado A, a fração do seu dinheiro na carteira de tangência e no ativo livre de risco; elas somam " +
+                "100%. Uma fatia de tangência acima de 100% significa tomar emprestado para investir mais do que você tem.",
+        ),
+        Entry(
+            "Verificação",
+            "Na carteira de tangência, (μᵢ − rf) / Cov(rᵢ, r_T) é igual para todos os ativos: nenhuma troca entre ativos " +
+                "melhora o índice de Sharpe. OK significa que os pesos calculados satisfazem isso. Só se aplica com venda a descoberto.",
+        ),
+        Entry(
+            "β tangência",
+            "Cov(rᵢ, r_T) / Var(r_T): o quanto um ativo se move junto com a carteira de tangência. Acima de 1 ele amplifica " +
+                "os movimentos da carteira; abaixo de 1 ele os amortece.",
+        ),
+        Entry(
+            "Beta de mercado",
+            "Cov(rᵢ, r_m) / Var(r_m) em relação ao índice de referência: um beta de 1,2 significa que o ativo tendeu a variar 1,2% " +
+                "a cada 1% do mercado. O beta de uma carteira é a média ponderada por valor Σ wᵢ βᵢ.",
+        ),
+        Entry(
+            "Beta ajustado da Bloomberg",
+            "0,66 × β + 0,34. Ele puxa os betas históricos em direção a 1 porque estimativas extremas são em parte ruído e os betas " +
+                "tendem à média do mercado com o tempo.",
+        ),
+        Entry(
+            "Diferença de Sharpe vs tangência",
+            "O índice de Sharpe da carteira de tangência menos o de uma carteira: quanto retorno ajustado ao risco essa carteira " +
+                "deixa na mesa, por essas estimativas históricas.",
+        ),
+        Entry(
+            "Alocação do capital",
+            "Alvo: dinheiro para cada ativo (capital × fatia de tangência × peso). Ações: alvo ÷ último preço, arredondado para baixo. " +
+                "Custo: ações × preço. Sobra: dinheiro não gasto por causa do arredondamento.",
         ),
     )
 }

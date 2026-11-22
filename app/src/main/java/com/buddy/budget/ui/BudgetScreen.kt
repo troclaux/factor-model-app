@@ -80,6 +80,7 @@ import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.abs
+import com.buddy.budget.i18n.tr
 
 private val currency: NumberFormat = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
 
@@ -98,7 +99,7 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Budget · ${viewModel.draft.monthKey}") },
+                    title = { Text(tr("Budget · %s").format(viewModel.draft.monthKey)) },
                     actions = { BackupMenu(tint = MaterialTheme.colorScheme.onPrimary) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -106,7 +107,7 @@ fun BudgetScreen(viewModel: BudgetViewModel) {
                     )
                 )
                 PrimaryTabRow(selectedTabIndex = viewModel.selectedTab) {
-                    listOf("Plan", "Items", "Report", "History").forEachIndexed { index, title ->
+                    listOf(tr("Plan"), tr("Items"), tr("Report"), tr("History")).forEachIndexed { index, title ->
                         Tab(selected = viewModel.selectedTab == index, onClick = { viewModel.selectedTab = index }, text = { Text(title) })
                     }
                 }
@@ -137,9 +138,9 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
     var confirmingSave by remember { mutableStateOf(false) }
     val previous = viewModel.previous
     val leftoverHint = if (previous != null && BudgetHistory.defaultLeftover(previous, java.time.LocalDate.now()) != 0.0) {
-        "Balance of ${previous.monthKey}"
+        tr("Balance of %s").format(previous.monthKey)
     } else {
-        "Money left from last month"
+        tr("Money left from last month")
     }
 
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -180,7 +181,7 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         if (viewModel.inflows.isNotEmpty()) {
             item(key = BudgetViewModel.INFLOWS) {
                 CategoryGroup(
-                    title = "Inflows",
+                    title = tr("Inflows"),
                     total = viewModel.inflows.filter { counted(it.value, draft) }.sumOf { amountOf(it.value) },
                     expanded = viewModel.isCategoryExpanded(BudgetViewModel.INFLOWS),
                     onToggle = { viewModel.toggleCategory(BudgetViewModel.INFLOWS) }
@@ -199,7 +200,7 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
             }
         }
 
-        listOf(Section.DEBTS to "Debts", Section.TAXES to "Taxes").forEach { (section, title) ->
+        listOf(Section.DEBTS to tr("Debts"), Section.TAXES to tr("Taxes")).forEach { (section, title) ->
             val items = viewModel.items(section)
             if (items.isNotEmpty()) {
                 item(key = section.name) {
@@ -227,16 +228,16 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("This month", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("This month"), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Edits are kept until the month changes. Save the month to add it to History (saving again replaces it).",
+                        tr("Edits are kept until the month changes. Save the month to add it to History (saving again replaces it)."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Button(onClick = { confirmingSave = true }, modifier = Modifier.fillMaxWidth()) { Text("Save month to history") }
+                    Button(onClick = { confirmingSave = true }, modifier = Modifier.fillMaxWidth()) { Text(tr("Save month to history")) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { defaultChanges = viewModel.defaultChanges() }, modifier = Modifier.weight(1f)) { Text("Save as defaults…") }
-                        OutlinedButton(onClick = { confirmingReset = true }, modifier = Modifier.weight(1f)) { Text("Reset month") }
+                        OutlinedButton(onClick = { defaultChanges = viewModel.defaultChanges() }, modifier = Modifier.weight(1f)) { Text(tr("Save as defaults…")) }
+                        OutlinedButton(onClick = { confirmingReset = true }, modifier = Modifier.weight(1f)) { Text(tr("Reset month")) }
                     }
                 }
             }
@@ -257,25 +258,25 @@ private fun PlanContent(viewModel: BudgetViewModel, modifier: Modifier) {
         val replaces = viewModel.history.any { it.monthKey == monthKey }
         AlertDialog(
             onDismissRequest = { confirmingSave = false },
-            title = { Text("Save $monthKey to history?") },
+            title = { Text(tr("Save %s to history?").format(monthKey)) },
             text = {
                 Text(
-                    "Balance: ${money(viewModel.report.balance)}." +
-                        if (replaces) " This replaces the $monthKey entry already in History." else ""
+                    tr("Balance: %s.").format(money(viewModel.report.balance)) +
+                        if (replaces) tr(" This replaces the %s entry already in History.").format(monthKey) else ""
                 )
             },
-            confirmButton = { TextButton(onClick = { viewModel.saveMonth(); confirmingSave = false }) { Text(if (replaces) "Replace" else "Save") } },
-            dismissButton = { TextButton(onClick = { confirmingSave = false }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { viewModel.saveMonth(); confirmingSave = false }) { Text(if (replaces) tr("Replace") else tr("Save")) } },
+            dismissButton = { TextButton(onClick = { confirmingSave = false }) { Text(tr("Cancel")) } },
         )
     }
 
     if (confirmingReset) {
         AlertDialog(
             onDismissRequest = { confirmingReset = false },
-            title = { Text("Reset this month?") },
-            text = { Text("All edits and one-off items for this month are replaced by the defaults and last month's leftover and fatura total.") },
-            confirmButton = { TextButton(onClick = { viewModel.resetMonth(); confirmingReset = false }) { Text("Reset") } },
-            dismissButton = { TextButton(onClick = { confirmingReset = false }) { Text("Cancel") } },
+            title = { Text(tr("Reset this month?")) },
+            text = { Text(tr("All edits and one-off items for this month are replaced by the defaults and last month's leftover and fatura total.")) },
+            confirmButton = { TextButton(onClick = { viewModel.resetMonth(); confirmingReset = false }) { Text(tr("Reset")) } },
+            dismissButton = { TextButton(onClick = { confirmingReset = false }) { Text(tr("Cancel")) } },
         )
     }
 }
@@ -317,7 +318,7 @@ private fun ItemDialogs(
                         onEditingChange(null)
                     }
                 },
-                removeLabel = if (item.oneOff) "Remove" else "Delete",
+                removeLabel = tr(if (item.oneOff) "Remove" else tr("Delete")),
             )
         }
     }
@@ -329,15 +330,15 @@ private fun ItemDialogs(
         } else {
             AlertDialog(
                 onDismissRequest = { onDeletingChange(null) },
-                title = { Text("Delete $name?") },
-                text = { Text("It is removed from your defaults and from this month. Saved months in History keep it.") },
+                title = { Text(tr("Delete %s?").format(name)) },
+                text = { Text(tr("It is removed from your defaults and from this month. Saved months in History keep it.")) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.removeRecurring(section, index)
                         onDeletingChange(null)
-                    }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    }) { Text(tr("Delete"), color = MaterialTheme.colorScheme.error) }
                 },
-                dismissButton = { TextButton(onClick = { onDeletingChange(null) }) { Text("Cancel") } },
+                dismissButton = { TextButton(onClick = { onDeletingChange(null) }) { Text(tr("Cancel")) } },
             )
         }
     }
@@ -349,16 +350,16 @@ private fun DefaultsDialog(changes: List<DefaultChange>, onDismiss: () -> Unit, 
     var chosen by remember { mutableStateOf(setOf<Int>()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Save as new defaults") },
+        title = { Text(tr("Save as new defaults")) },
         text = {
             if (changes.isEmpty()) {
-                Text("Nothing differs from the defaults.")
+                Text(tr("Nothing differs from the defaults."))
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = chosen.size == changes.size, onCheckedChange = { all -> chosen = if (all) changes.indices.toSet() else emptySet() })
-                            Text("All", fontWeight = FontWeight.SemiBold)
+                            Text(tr("All"), fontWeight = FontWeight.SemiBold)
                         }
                     }
                     changes.forEachIndexed { index, change ->
@@ -373,9 +374,9 @@ private fun DefaultsDialog(changes: List<DefaultChange>, onDismiss: () -> Unit, 
             }
         },
         confirmButton = {
-            TextButton(enabled = chosen.isNotEmpty(), onClick = { onSave(chosen.sorted().map { changes[it] }) }) { Text("Save") }
+            TextButton(enabled = chosen.isNotEmpty(), onClick = { onSave(chosen.sorted().map { changes[it] }) }) { Text(tr("Save")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel")) } },
     )
 }
 
@@ -389,9 +390,9 @@ private fun counted(item: DraftItem, draft: BudgetDraft) = !(draft.useFaturaLump
 
 /** With a fatura lump sum, fatura items are marked as part of that total. */
 private fun tagFor(item: DraftItem, faturaLump: Boolean) = listOfNotNull(
-    if (item.isFatura) (if (faturaLump) "fatura (in total)" else "fatura") else item.day?.let { "d$it" },
-    if (item.inflow) "inflow" else null,
-    if (item.oneOff) "one-off" else null,
+    if (item.isFatura) tr(if (faturaLump) "fatura (in total)" else "fatura") else item.day?.let { "d$it" },
+    if (item.inflow) tr("inflow") else null,
+    if (item.oneOff) tr("one-off") else null,
 ).joinToString(" · ")
 
 // ---------- Items ----------
@@ -412,14 +413,14 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Recurring items", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Recurring items"), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Added to your defaults and to this month.",
+                        tr("Added to your defaults and to this month."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(false to "Outflow", true to "Inflow").forEach { (inflow, label) ->
+                        listOf(false to tr("Outflow"), true to tr("Inflow")).forEach { (inflow, label) ->
                             OutlinedButton(onClick = { creatingInflow = inflow }, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
                                 Text(label, Modifier.padding(start = 4.dp), maxLines = 1)
@@ -433,39 +434,39 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("One-off items", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("One-off items"), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Extra expenses or income for this month only. Expenses go under Other, bonuses under Inflows; they are never saved as defaults.",
+                        tr("Extra expenses or income for this month only. Expenses go under Other, bonuses under Inflows; they are never saved as defaults."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { viewModel.addOneOff(inflow = false) }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
-                            Text("Expense", Modifier.padding(start = 6.dp))
+                            Text(tr("Expense"), Modifier.padding(start = 6.dp))
                         }
                         OutlinedButton(onClick = { viewModel.addOneOff(inflow = true) }, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Default.Add, contentDescription = null, Modifier.size(18.dp))
-                            Text("Bonus", Modifier.padding(start = 6.dp))
+                            Text(tr("Bonus"), Modifier.padding(start = 6.dp))
                         }
                     }
                 }
             }
         }
 
-        listOf("Fatura" to true, "Non-fatura" to false).forEach { (title, fatura) ->
+        listOf(tr("Fatura") to true, tr("Non-fatura") to false).forEach { (title, fatura) ->
             val rows = allItems.filter { it.second.value.isFatura == fatura }
             item(key = title) {
                 ReportCard("$title (${rows.size})") {
-                    if (rows.isEmpty()) Text("None yet.", style = MaterialTheme.typography.bodySmall)
+                    if (rows.isEmpty()) Text(tr("None yet."), style = MaterialTheme.typography.bodySmall)
                     rows.forEach { (section, indexed) ->
                         val (index, item) = indexed
                         ManagedItemRow(
                             item = item,
                             kind = when (section) {
                                 Section.EXPENSES -> if (item.inflow) null else Category.label(item.category)
-                                Section.DEBTS -> "Debt"
-                                Section.TAXES -> "Taxes"
+                                Section.DEBTS -> tr("Debt")
+                                Section.TAXES -> tr("Taxes")
                             },
                             defaultAmount = if (item.oneOff) null else viewModel.defaultAmount(section, item.name),
                             onEdit = { editing = section to index },
@@ -482,7 +483,7 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
     creatingInflow?.let { inflow ->
         ItemEditDialog(
             item = DraftItem(name = "", amount = "", inflow = inflow),
-            title = if (inflow) "New recurring inflow" else "New recurring outflow",
+            title = tr(if (inflow) "New recurring inflow" else "New recurring outflow"),
             mode = ItemDialogMode.CREATE,
             // Debt and Taxes outflows go to their own sections.
             categories = if (inflow) null else Category.entries,
@@ -504,9 +505,9 @@ private fun ItemsContent(viewModel: BudgetViewModel, modifier: Modifier) {
 private fun ManagedItemRow(item: DraftItem, kind: String?, defaultAmount: String?, onEdit: () -> Unit, onDelete: () -> Unit) {
     val details = listOfNotNull(
         kind,
-        if (item.isFatura) null else item.day?.let { "day $it" } ?: "no day",
-        defaultAmount?.let { "default ${money(BudgetDraft.parseAmount(it))}" },
-        if (item.oneOff) "one-off" else null,
+        if (item.isFatura) null else item.day?.let { tr("day %d").format(it) } ?: tr("no day"),
+        defaultAmount?.let { tr("default %s").format(money(BudgetDraft.parseAmount(it))) },
+        if (item.oneOff) tr("one-off") else null,
     ).joinToString(" · ")
     Row(Modifier.fillMaxWidth().clickable(onClick = onEdit), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
@@ -520,8 +521,8 @@ private fun ManagedItemRow(item: DraftItem, kind: String?, defaultAmount: String
             fontWeight = FontWeight.SemiBold,
             color = if (item.inflow) Green500 else Red500,
         )
-        IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Edit ${item.name}") }
-        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete ${item.name}", tint = MaterialTheme.colorScheme.error) }
+        IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = tr("Edit %s").format(item.name)) }
+        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = tr("Delete %s").format(item.name), tint = MaterialTheme.colorScheme.error) }
     }
 }
 
@@ -557,7 +558,7 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
                                 withContext(Dispatchers.Default) {
                                     BudgetPdf(context, report, viewModel.draft.monthKey, viewModel.changesVsLast, previousMonth, viewModel.history).writeTo(file)
                                 }
-                                shareFile(context, file, "application/pdf", "Share budget PDF")
+                                shareFile(context, file, "application/pdf", tr("Share budget PDF"))
                             } finally {
                                 exporting = false
                             }
@@ -565,31 +566,31 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
                     },
                 ) {
                     Icon(Icons.Default.PictureAsPdf, contentDescription = null, Modifier.size(18.dp))
-                    Text(if (exporting) "Creating PDF…" else "Share PDF report", Modifier.padding(start = 8.dp))
+                    Text(tr(if (exporting) "Creating PDF…" else "Share PDF report"), Modifier.padding(start = 8.dp))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { copyToClipboard(context, text()) }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(18.dp))
-                        Text("Copy report", Modifier.padding(start = 8.dp))
+                        Text(tr("Copy report"), Modifier.padding(start = 8.dp))
                     }
                     OutlinedButton(onClick = { shareText(context, text(), "output.txt") }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
-                        Text("Share .txt", Modifier.padding(start = 8.dp))
+                        Text(tr("Share .txt"), Modifier.padding(start = 8.dp))
                     }
                 }
             }
         }
 
         item {
-            ReportCard("Summary") {
-                LineRow("Net salary", money(month.salary))
-                if (month.leftover != 0.0) LineRow("Leftover", "+ ${money(month.leftover)}")
-                if (report.totalInflow != 0.0) LineRow("Inflows", "+ ${money(report.totalInflow)}")
-                LineRow("Outflows", "− ${money(report.totalOutflow)}")
+            ReportCard(tr("Summary")) {
+                LineRow(tr("Net salary"), money(month.salary))
+                if (month.leftover != 0.0) LineRow(tr("Leftover"), "+ ${money(month.leftover)}")
+                if (report.totalInflow != 0.0) LineRow(tr("Inflows"), "+ ${money(report.totalInflow)}")
+                LineRow(tr("Outflows"), "− ${money(report.totalOutflow)}")
                 HorizontalDivider()
                 val free = report.balance >= 0
                 LineRow(
-                    if (free) "Free to spend" else "Deficit",
+                    tr(if (free) "Free to spend" else "Deficit"),
                     money(abs(report.balance)),
                     emphasize = true,
                     color = if (free) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
@@ -598,7 +599,7 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
         }
 
         item {
-            ReportCard("Payment timeline") {
+            ReportCard(tr("Payment timeline")) {
                 report.timeline.forEach { entry ->
                     LineRow("${BudgetText.dayLabel(entry.day)}  ${entry.name}", signed(entry.amount, entry.inflow), emphasize = entry.isFatura)
                 }
@@ -606,27 +607,27 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
         }
 
         item {
-            ReportCard("Fatura · day ${month.faturaDay}") {
-                month.faturaLump?.let { LineRow("Lump sum", signed(it, inflow = false)) }
+            ReportCard(tr("Fatura · day %d").format(month.faturaDay)) {
+                month.faturaLump?.let { LineRow(tr("Lump sum"), signed(it, inflow = false)) }
                 report.faturaItems.filter { it.amount > 0 }.forEach { LineRow("${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow), onEdit = editor(Section.EXPENSES, it.name)) }
-                report.faturaDebts.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Debt", signed(it.amount, inflow = false), onEdit = editor(Section.DEBTS, it.name)) }
-                report.faturaTaxes.filter { it.amount > 0 }.forEach { LineRow("${it.name} · Taxes", signed(it.amount, inflow = false), onEdit = editor(Section.TAXES, it.name)) }
+                report.faturaDebts.filter { it.amount > 0 }.forEach { LineRow("${it.name} · ${tr("Debt")}", signed(it.amount, inflow = false), onEdit = editor(Section.DEBTS, it.name)) }
+                report.faturaTaxes.filter { it.amount > 0 }.forEach { LineRow("${it.name} · ${tr("Taxes")}", signed(it.amount, inflow = false), onEdit = editor(Section.TAXES, it.name)) }
                 HorizontalDivider()
-                LineRow("Total", money(report.totalFatura), emphasize = true)
+                LineRow(tr("Total"), money(report.totalFatura), emphasize = true)
             }
         }
 
         item {
-            ReportCard("Non-fatura") {
+            ReportCard(tr("Non-fatura")) {
                 report.nonFaturaItems.filter { it.amount > 0 }.sortedBy { it.day ?: 32 }.forEach {
                     LineRow("${BudgetText.dayLabel(it.day)}  ${it.name} · ${Category.label(it.category)}", signed(it.amount, it.inflow), onEdit = editor(Section.EXPENSES, it.name))
                 }
                 HorizontalDivider()
-                LineRow("Total (net)", money(report.totalNonFatura), emphasize = true)
+                LineRow(tr("Total (net)"), money(report.totalNonFatura), emphasize = true)
             }
         }
 
-        listOf(Triple("Debts", month.debts, Section.DEBTS), Triple("Taxes", month.taxes, Section.TAXES)).forEach { (title, items, section) ->
+        listOf(Triple(tr("Debts"), month.debts, Section.DEBTS), Triple(tr("Taxes"), month.taxes, Section.TAXES)).forEach { (title, items, section) ->
             if (items.any { it.amount > 0 }) {
                 item {
                     ReportCard(title) {
@@ -634,27 +635,27 @@ private fun ReportContent(viewModel: BudgetViewModel, modifier: Modifier) {
                             LineRow("${BudgetText.dayLabel(it.day)}  ${it.name}${if (it.isFatura) " · fatura" else ""}", money(it.amount), onEdit = editor(section, it.name))
                         }
                         HorizontalDivider()
-                        LineRow("Total", money(items.sumOf { it.amount }), emphasize = true)
+                        LineRow(tr("Total"), money(items.sumOf { it.amount }), emphasize = true)
                     }
                 }
             }
         }
 
         item {
-            ReportCard("By category (outflows)") {
+            ReportCard(tr("By category (outflows)")) {
                 val total = report.byCategory.sumOf { it.second }
                 report.byCategory.forEach { (category, amount) ->
                     LineRow("${Category.label(category)} · ${"%.1f%%".format(if (total != 0.0) amount / total * 100 else 0.0)}", money(amount))
                 }
                 HorizontalDivider()
-                LineRow("Total outflow", money(report.totalOutflow), emphasize = true)
-                if (report.totalInflow != 0.0) LineRow("Total inflow", money(report.totalInflow))
+                LineRow(tr("Total outflow"), money(report.totalOutflow), emphasize = true)
+                if (report.totalInflow != 0.0) LineRow(tr("Total inflow"), money(report.totalInflow))
             }
         }
 
         if (viewModel.changesVsLast.isNotEmpty() && previousMonth != null) {
             item {
-                ReportCard("Changes vs $previousMonth") {
+                ReportCard(tr("Changes vs %s").format(previousMonth)) {
                     viewModel.changesVsLast.forEach { LineRow(it.name, "${money(it.old)} → ${money(it.new)}  ${it.percent}") }
                 }
             }
@@ -676,7 +677,7 @@ private fun HistoryContent(viewModel: BudgetViewModel, modifier: Modifier) {
     LazyColumn(modifier = modifier, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                listOf(null to "All", 3 to "Last 3", 6 to "Last 6", 12 to "Last 12").forEach { (count, label) ->
+                listOf(null to tr("All"), 3 to tr("Last 3"), 6 to tr("Last 6"), 12 to tr("Last 12")).forEach { (count, label) ->
                     FilterChip(selected = last == count, onClick = { last = count }, label = { Text(label) })
                 }
             }
@@ -684,7 +685,7 @@ private fun HistoryContent(viewModel: BudgetViewModel, modifier: Modifier) {
         if (entries.isEmpty()) {
             item {
                 Text(
-                    "No months saved yet. Use \"Save month to history\" on the Plan tab.",
+                    tr("No months saved yet. Use \"Save month to history\" on the Plan tab."),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(32.dp),
                 )
@@ -694,16 +695,16 @@ private fun HistoryContent(viewModel: BudgetViewModel, modifier: Modifier) {
         item {
             OutlinedButton(onClick = { shareText(context, BudgetText.history(entries), "history.txt") }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
-                Text("Share history .txt", Modifier.padding(start = 8.dp))
+                Text(tr("Share history .txt"), Modifier.padding(start = 8.dp))
             }
         }
         if (entries.size > 1) {
             item {
                 val averages = BudgetHistory.averages(entries)
-                ReportCard("Averages over ${entries.size} months") {
-                    LineRow("Salary", money(averages.salary))
-                    LineRow("Expenses", money(averages.expenses))
-                    LineRow("Balance (salary − expenses)", money(averages.balance), emphasize = true)
+                ReportCard(tr("Averages over %d months").format(entries.size)) {
+                    LineRow(tr("Salary"), money(averages.salary))
+                    LineRow(tr("Expenses"), money(averages.expenses))
+                    LineRow(tr("Balance (salary − expenses)"), money(averages.balance), emphasize = true)
                     HorizontalDivider()
                     averages.categories.forEach { (category, average) -> LineRow(Category.label(category), money(average)) }
                 }
@@ -712,17 +713,17 @@ private fun HistoryContent(viewModel: BudgetViewModel, modifier: Modifier) {
         entries.reversed().forEach { entry ->
             item(key = entry.monthKey) {
                 ReportCard(entry.monthKey) {
-                    LineRow("Salary", money(entry.salary))
-                    LineRow("Balance", money(entry.effectiveBalance), emphasize = true)
+                    LineRow(tr("Salary"), money(entry.salary))
+                    LineRow(tr("Balance"), money(entry.effectiveBalance), emphasize = true)
                     HorizontalDivider()
                     entry.categories.filterValues { it > 0 }.toList().sortedByDescending { it.second }.forEach { (category, amount) ->
                         val share = if (entry.total != 0.0) amount / entry.total * 100 else 0.0
                         LineRow("${Category.label(category)} · ${"%.1f%%".format(share)}", money(amount))
                     }
                     HorizontalDivider()
-                    LineRow("Total expenses", money(entry.total), emphasize = true)
-                    LineRow("Fatura", money(entry.fatura))
-                    LineRow("Non-fatura", money(entry.nonFatura))
+                    LineRow(tr("Total expenses"), money(entry.total), emphasize = true)
+                    LineRow(tr("Fatura"), money(entry.fatura))
+                    LineRow(tr("Non-fatura"), money(entry.nonFatura))
                 }
             }
         }
@@ -755,7 +756,7 @@ private fun LineRow(
     Row(rowModifier, verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, color = color)
-        if (onEdit != null) Icon(Icons.Default.Edit, contentDescription = "Edit", Modifier.padding(start = 8.dp).size(16.dp), tint = MaterialTheme.colorScheme.outline)
+        if (onEdit != null) Icon(Icons.Default.Edit, contentDescription = tr("Edit"), Modifier.padding(start = 8.dp).size(16.dp), tint = MaterialTheme.colorScheme.outline)
     }
 }
 

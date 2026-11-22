@@ -7,6 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.buddy.budget.i18n.tr
 
 /** Brazilian risk-free rates from the Banco Central's public time series API (SGS). */
 object BancoCentral {
@@ -34,12 +35,12 @@ object BancoCentral {
         connection.connectTimeout = 15_000
         connection.readTimeout = 15_000
         val body = try {
-            if (connection.responseCode !in 200..299) throw IllegalStateException("${rate.label}: Banco Central returned HTTP ${connection.responseCode}")
+            if (connection.responseCode !in 200..299) throw IllegalStateException("${rate.label}: " + tr("Banco Central returned HTTP %d").format(connection.responseCode))
             connection.inputStream.bufferedReader().use { it.readText() }
         } finally {
             connection.disconnect()
         }
-        latestRate(body) ?: throw IllegalStateException("${rate.label}: no rate published in the 30 days before $end")
+        latestRate(body) ?: throw IllegalStateException("${rate.label}: " + tr("no rate published in the 30 days before %s").format(end))
     }
 
     /** Parses the SGS JSON ([{"data":"30/10/2026","valor":"13.65"}, ...]); null when it has no rows. */

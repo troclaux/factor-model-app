@@ -5,6 +5,7 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.sqrt
 import kotlin.math.tan
+import com.buddy.budget.i18n.tr
 
 typealias Vector = DoubleArray
 typealias Matrix = Array<DoubleArray>
@@ -94,7 +95,7 @@ object PortfolioMath {
         for (pivotCol in 0 until size) {
             val pivotRow = (pivotCol until size).maxBy { abs(work[it][pivotCol]) }
             if (abs(work[pivotRow][pivotCol]) < 1e-14) {
-                throw IllegalArgumentException("Covariance matrix is singular and cannot be inverted")
+                throw IllegalArgumentException(tr("Covariance matrix is singular and cannot be inverted"))
             }
             work[pivotCol] = work[pivotRow].also { work[pivotRow] = work[pivotCol] }
             val pivot = work[pivotCol][pivotCol]
@@ -127,7 +128,7 @@ object PortfolioMath {
         val size = expected.size
         val premiums = DoubleArray(size) { expected[it] - riskFreeRate }
         if (premiums.all { it <= 0.0 }) {
-            throw IllegalArgumentException("No asset has an expected return above the risk-free rate")
+            throw IllegalArgumentException(tr("No asset has an expected return above the risk-free rate"))
         }
         val scaled = DoubleArray(size)
         for (sweep in 0 until 200_000) {

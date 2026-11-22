@@ -1,6 +1,7 @@
 package com.buddy.budget.model
 
 import com.google.gson.annotations.SerializedName
+import com.buddy.budget.i18n.tr
 
 /** Recurring defaults, in the same JSON format as budget.py's budget_config.json. */
 data class BudgetConfig(
@@ -36,7 +37,7 @@ data class DebtTaxItem(
     @SerializedName("is_fatura") val isFatura: Boolean = false
 )
 
-enum class Category(val label: String) {
+enum class Category(val englishLabel: String) {
     HOUSING("Housing"),
     UTILITIES("Utilities"),
     FOOD("Food"),
@@ -48,6 +49,9 @@ enum class Category(val label: String) {
     TAXES("Taxes"),
     DEBT("Debt"),
     OTHER("Other");
+
+    /** The label in the app's language. */
+    val label: String get() = tr(englishLabel)
 
     companion object {
         fun fromString(s: String): Category =

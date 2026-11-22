@@ -20,6 +20,7 @@ import com.buddy.budget.model.ExpenseItem
 import com.buddy.budget.model.HistoryEntry
 import com.buddy.budget.model.buildBudgetReport
 import java.time.LocalDate
+import com.buddy.budget.i18n.tr
 
 /** Which list of the draft an item belongs to. */
 enum class Section { EXPENSES, DEBTS, TAXES }
@@ -144,7 +145,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         }
         edit { current -> current.withSection(section) { it + added } }
         expandedCategories[if (added.inflow) INFLOWS else if (section == Section.EXPENSES) Category.fromString(added.category).name else section.name] = true
-        message = "Added ${added.name} to your defaults."
+        message = tr("Added %s to your defaults.").format(added.name)
     }
 
     /** Deletes a recurring item from the defaults and from this month. */
@@ -158,7 +159,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
         edit { current -> current.withSection(section) { list -> list.filterIndexed { position, _ -> position != index } } }
-        message = "Deleted ${item.name} from your defaults."
+        message = tr("Deleted %s from your defaults.").format(item.name)
     }
 
     private fun BudgetDraft.withSection(section: Section, transform: (List<DraftItem>) -> List<DraftItem>) = when (section) {
@@ -181,7 +182,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
 
     /** Adds a one-off expense or bonus for this month, named like budget.py's "Expense 1" / "Bonus 1". */
     fun addOneOff(inflow: Boolean) = edit { current ->
-        val prefix = if (inflow) "Bonus" else "Expense"
+        val prefix = tr(if (inflow) "Bonus" else "Expense")
         val number = current.expenses.count { it.oneOff && it.inflow == inflow } + 1
         expandedCategories[if (inflow) INFLOWS else Category.OTHER.name] = true
         current.copy(expenses = current.expenses + DraftItem("$prefix $number", "", inflow = inflow, oneOff = true))
@@ -195,7 +196,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     fun resetMonth() {
         val today = LocalDate.now()
         edit { BudgetDraft.fromConfig(config, BudgetHistory.previousEntry(history, today), today) }
-        message = "Month reset to the defaults."
+        message = tr("Month reset to the defaults.")
     }
 
     /** Saves this month to history, replacing any earlier save for the same month. */
@@ -204,7 +205,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
         val (updated, replaced) = BudgetHistory.upsert(history, entry)
         store.saveHistory(updated)
         history = updated
-        message = "${if (replaced) "Replaced" else "Saved"} history for ${entry.monthKey}."
+        message = tr(if (replaced) "Replaced history for %s." else "Saved history for %s.").format(entry.monthKey)
     }
 
     fun defaultChanges(): List<DefaultChange> = BudgetHistory.findDefaultChanges(config, month)
@@ -212,7 +213,7 @@ class BudgetViewModel(application: Application) : AndroidViewModel(application) 
     fun saveDefaults(chosen: List<DefaultChange>) {
         if (chosen.isEmpty()) return
         updateConfig { current -> chosen.fold(current) { updated, change -> change.apply(updated) } }
-        message = "Updated ${chosen.size} default(s)."
+        message = tr("Updated %d default(s).").format(chosen.size)
     }
 
     fun dismissMessage() {

@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import com.buddy.budget.i18n.tr
 
 /**
  * Reads stock holdings from Open Finance through Pluggy (https://docs.pluggy.ai).
@@ -84,7 +85,7 @@ object Pluggy {
                 val message = json?.get("message")?.takeIf { !it.isJsonNull }?.asString ?: "HTTP ${connection.responseCode}"
                 throw IllegalStateException("Pluggy: $message")
             }
-            return json ?: throw IllegalStateException("Pluggy: unexpected response")
+            return json ?: throw IllegalStateException(tr("Pluggy: unexpected response"))
         } finally {
             connection.disconnect()
         }

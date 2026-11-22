@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import java.io.File
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
+import com.buddy.budget.i18n.tr
 
 /**
  * A styled, paginated A4 PDF (units are points): green header band, section titles, paragraphs,
@@ -98,7 +99,7 @@ abstract class PdfWriter(context: Context, private val footerTitle: String) {
         canvas.drawLine(MARGIN, baseline - 12f, MARGIN + CONTENT_WIDTH, baseline - 12f, stroke(RULE))
         canvas.drawText(footerTitle, MARGIN, baseline, footer)
         footer.textAlign = Paint.Align.RIGHT
-        canvas.drawText("Page $pageNumber", MARGIN + CONTENT_WIDTH, baseline, footer)
+        canvas.drawText(tr("Page %d").format(pageNumber), MARGIN + CONTENT_WIDTH, baseline, footer)
         document.finishPage(page)
     }
 

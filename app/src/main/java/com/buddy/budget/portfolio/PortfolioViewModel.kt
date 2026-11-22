@@ -27,6 +27,7 @@ import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.math.roundToLong
+import com.buddy.budget.i18n.tr
 
 class PortfolioViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -126,8 +127,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         val current = settings
         val itemIds = current.pluggyItemIds.split(Regex("[\\s,;]+")).filter { it.isNotEmpty() }
         val validation = when {
-            current.pluggyClientId.isBlank() || current.pluggyClientSecret.isBlank() -> "Enter your Pluggy client ID and secret."
-            itemIds.isEmpty() -> "Enter at least one Pluggy item ID."
+            current.pluggyClientId.isBlank() || current.pluggyClientSecret.isBlank() -> tr("Enter your Pluggy client ID and secret.")
+            itemIds.isEmpty() -> tr("Enter at least one Pluggy item ID.")
             else -> null
         }
         if (validation != null) {
@@ -141,7 +142,7 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val holdings = Pluggy.fetchHoldings(current.pluggyClientId.trim(), current.pluggyClientSecret.trim(), itemIds)
                 if (holdings.isEmpty()) {
-                    error = "No stock, FII, BDR or ETF positions found in these connections."
+                    error = tr("No stock, FII, BDR or ETF positions found in these connections.")
                 } else {
                     val added = holdings.keys - current.tickers.toSet()
                     update {
@@ -150,10 +151,10 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                             current = PortfolioInput(InputMode.SHARES, holdings.mapValues { (_, quantity) -> quantity.toBigDecimal().stripTrailingZeros().toPlainString() }),
                         )
                     }
-                    message = "Imported ${holdings.size} positions" + if (added.isEmpty()) "." else ", added ${added.joinToString()}."
+                    message = if (added.isEmpty()) tr("Imported %d positions.").format(holdings.size) else tr("Imported %d positions, added %s.").format(holdings.size, added.joinToString())
                 }
             } catch (exception: Exception) {
-                error = exception.message ?: "Import failed"
+                error = exception.message ?: tr("Import failed")
             } finally {
                 importing = false
             }
@@ -178,12 +179,12 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
             PeriodMode.DATES -> startDate
         }
         val validation = when {
-            tickers.size < 2 -> "Add at least two tickers."
-            riskFreeProxy == null && typedRiskFreeRate == null -> "Enter a valid risk-free rate."
-            current.periodMode == PeriodMode.LOOKBACK && start == null -> "Enter a positive lookback."
-            current.periodMode == PeriodMode.DATES && startDate == null -> "Pick a start date."
-            end == null -> "Pick an end date or use the latest available."
-            start == null || start >= end -> "The start date must be before the end date."
+            tickers.size < 2 -> tr("Add at least two tickers.")
+            riskFreeProxy == null && typedRiskFreeRate == null -> tr("Enter a valid risk-free rate.")
+            current.periodMode == PeriodMode.LOOKBACK && start == null -> tr("Enter a positive lookback.")
+            current.periodMode == PeriodMode.DATES && startDate == null -> tr("Pick a start date.")
+            end == null -> tr("Pick an end date or use the latest available.")
+            start == null || start >= end -> tr("The start date must be before the end date.")
             else -> null
         }
         if (validation != null) {
@@ -212,8 +213,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 cachedKey = key
                 val riskFreeSource = when {
                     centralBankRate != null -> "${centralBankRate.label}, Banco Central"
-                    riskFreeProxy != null -> "fetched from $riskFreeProxy"
-                    else -> "entered"
+                    riskFreeProxy != null -> tr("fetched from %s").format(riskFreeProxy)
+                    else -> tr("entered")
                 }
                 result = withContext(Dispatchers.Default) { compute(current, prices, riskFreeRate, riskFreeSource) }
                 analyzedSettings = current
@@ -224,7 +225,7 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 withContext(Dispatchers.IO) { runCatching { lastAnalysisRepository.save(saved) } }
                 selectedTab = 1
             } catch (exception: Exception) {
-                error = exception.message ?: "Analysis failed"
+                error = exception.message ?: tr("Analysis failed")
             } finally {
                 loading = false
             }

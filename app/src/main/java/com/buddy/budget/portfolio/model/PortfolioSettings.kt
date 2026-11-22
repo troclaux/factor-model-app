@@ -1,29 +1,42 @@
 package com.buddy.budget.portfolio.model
 
+import com.buddy.budget.i18n.tr
 import java.time.LocalDate
 
-enum class LookbackUnit(val label: String, val days: Double) {
+enum class LookbackUnit(val englishLabel: String, val days: Double) {
     DAYS("Days", 1.0),
     WEEKS("Weeks", 7.0),
     MONTHS("Months", 365.0 / 12),
-    YEARS("Years", 365.0),
+    YEARS("Years", 365.0);
+
+    /** The label in the app's language. */
+    val label: String get() = tr(englishLabel)
 }
 
-enum class Frequency(val label: String, val periodsPerYear: Int) {
+enum class Frequency(val englishLabel: String, val periodsPerYear: Int) {
     DAILY("Daily", 252),
     WEEKLY("Weekly", 52),
-    MONTHLY("Monthly", 12),
+    MONTHLY("Monthly", 12);
+
+    /** The label in the app's language. */
+    val label: String get() = tr(englishLabel)
 }
 
 /** How the price window is chosen: a lookback ending at the previous month's end, or explicit dates. */
-enum class PeriodMode(val label: String) {
+enum class PeriodMode(val englishLabel: String) {
     LOOKBACK("Lookback"),
-    DATES("Dates"),
+    DATES("Dates");
+
+    /** The label in the app's language. */
+    val label: String get() = tr(englishLabel)
 }
 
-enum class InputMode(val label: String) {
+enum class InputMode(val englishLabel: String) {
     SHARES("Shares"),
-    WEIGHTS("Weights %"),
+    WEIGHTS("Weights %");
+
+    /** The label in the app's language. */
+    val label: String get() = tr(englishLabel)
 }
 
 /** A user portfolio: one text value per ticker, read as share counts or weight percentages. */

@@ -15,6 +15,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.time.temporal.IsoFields
+import com.buddy.budget.i18n.tr
 
 /** Aligned adjusted closes: one row per date, one column per ticker. */
 data class PriceTable(
@@ -37,7 +38,7 @@ object YahooFinance {
         }.toMap()
         val table = resample(align(tickers, series), frequency)
         if (table.dates.size < 3) {
-            throw IllegalStateException("Not enough overlapping data: got ${table.dates.size} prices. Try a longer period.")
+            throw IllegalStateException(tr("Not enough overlapping data: got %d prices. Try a longer period.").format(table.dates.size))
         }
         return table
     }
@@ -80,14 +81,14 @@ object YahooFinance {
         }
 
         val chart = runCatching { JsonParser.parseString(body).asJsonObject.getAsJsonObject("chart") }.getOrNull()
-            ?: throw IllegalStateException("$ticker: unexpected response from Yahoo Finance")
+            ?: throw IllegalStateException("$ticker: " + tr("unexpected response from Yahoo Finance"))
         val result = chart.get("result")?.takeIf { it.isJsonArray }?.asJsonArray?.firstOrNull()?.asJsonObject
         if (result == null) {
             val description = chart.get("error")?.takeIf { it.isJsonObject }?.asJsonObject?.get("description")?.asString
-            throw IllegalStateException("$ticker: ${description ?: "no data returned"}")
+            throw IllegalStateException("$ticker: ${description ?: tr("no data returned")}")
         }
         val timestamps = result.getAsJsonArray("timestamp")
-            ?: throw IllegalStateException("$ticker: no data in the selected window")
+            ?: throw IllegalStateException("$ticker: " + tr("no data in the selected window"))
         val closes = result.getAsJsonObject("indicators").getAsJsonArray("adjclose")[0].asJsonObject.getAsJsonArray("adjclose")
         val offsetSeconds = result.getAsJsonObject("meta").get("gmtoffset")?.asInt ?: 0
 
@@ -98,7 +99,7 @@ object YahooFinance {
             val date = Instant.ofEpochSecond(timestamps[index].asLong + offsetSeconds).atZone(ZoneOffset.UTC).toLocalDate()
             if (date < end) series[date] = close.asDouble
         }
-        if (series.isEmpty()) throw IllegalStateException("$ticker: no data in the selected window")
+        if (series.isEmpty()) throw IllegalStateException("$ticker: " + tr("no data in the selected window"))
         return series
     }
 

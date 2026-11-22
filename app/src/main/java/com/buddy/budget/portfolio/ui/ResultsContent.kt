@@ -69,6 +69,7 @@ import com.buddy.budget.portfolio.model.parseNumber
 import com.buddy.budget.portfolio.model.percent
 import kotlin.math.abs
 import kotlinx.coroutines.launch
+import com.buddy.budget.i18n.tr
 
 @Composable
 fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
@@ -81,7 +82,7 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         ) {
             Icon(Icons.Default.QueryStats, contentDescription = null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
             Text(
-                "Set up your assets and tap Analyze to see the tangency portfolio.",
+                tr("Set up your assets and tap Analyze to see the tangency portfolio."),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 12.dp),
             )
@@ -98,7 +99,7 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         viewModel.analyzedAt?.let { ranAt ->
             item {
                 Text(
-                    "Analysis run on ${ranAt.toLocalDate()} at ${ranAt.toLocalTime()}. Tap Analyze on Setup to refresh.",
+                    tr("Analysis run on %s at %s. Tap Analyze on Setup to refresh.").format(ranAt.toLocalDate(), ranAt.toLocalTime()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -108,7 +109,7 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         if (result.warnings.isNotEmpty()) item { WarningsCard(result.warnings) }
         item { SummaryCard(result) }
         item {
-            ChartCard("Mean-variance diagram", "tangency.png") { capture ->
+            ChartCard(tr("Mean-variance diagram"), "tangency.png") { capture ->
                 MeanVarianceChart(result, capture)
                 ChartLegend(result)
             }
@@ -118,7 +119,7 @@ fun ResultsContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         item { BetasCard(result) }
         item { AllocationCard(viewModel, result) }
         item {
-            ChartCard("Correlation", "correlation_${result.startDate}_${result.endDate}.png") { capture ->
+            ChartCard(tr("Correlation"), "correlation_${result.startDate}_${result.endDate}.png") { capture ->
                 CorrelationHeatmap(result, capture)
             }
         }
@@ -135,7 +136,7 @@ private fun WarningsCard(warnings: List<String>) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                 Text(
-                    "Warnings",
+                    tr("Warnings"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.padding(start = 8.dp),
@@ -152,20 +153,20 @@ private fun WarningsCard(warnings: List<String>) {
 @Composable
 private fun SummaryCard(result: AnalysisResult) {
     val tangency = result.tangency
-    SectionCard("Tangency portfolio") {
+    SectionCard(tr("Tangency portfolio")) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 3) {
-            StatTile("Expected return", tangency.stats.expectedReturn.percent(), Modifier.weight(1f))
-            StatTile("Volatility", tangency.stats.volatility.percent(), Modifier.weight(1f))
-            StatTile("Sharpe ratio", "%.4f".format(tangency.stats.sharpeRatio), Modifier.weight(1f))
+            StatTile(tr("Expected return"), tangency.stats.expectedReturn.percent(), Modifier.weight(1f))
+            StatTile(tr("Volatility"), tangency.stats.volatility.percent(), Modifier.weight(1f))
+            StatTile(tr("Sharpe ratio"), "%.4f".format(tangency.stats.sharpeRatio), Modifier.weight(1f))
             if (tangency.marketBeta != null && tangency.adjustedBeta != null) {
-                StatTile("Market beta", "%.4f".format(tangency.marketBeta), Modifier.weight(1f))
-                StatTile("BBG adj. beta", "%.4f".format(tangency.adjustedBeta), Modifier.weight(1f))
+                StatTile(tr("Market beta"), "%.4f".format(tangency.marketBeta), Modifier.weight(1f))
+                StatTile(tr("BBG adj. beta"), "%.4f".format(tangency.adjustedBeta), Modifier.weight(1f))
                 Box(Modifier.weight(1f))
             }
         }
         Text(
-            "${result.startDate} → ${result.endDate} · ${result.observations} ${result.frequency.label.lowercase()} returns · " +
-                "rf ${result.riskFreeRate.percent()} (${result.riskFreeSource}) · shorts ${if (result.allowShort) "allowed" else "forbidden"}",
+            "${result.startDate} → ${result.endDate} · " + tr("%d %s returns").format(result.observations, result.frequency.label.lowercase()) + " · " +
+                "rf ${result.riskFreeRate.percent()} (${result.riskFreeSource}) · " + tr(if (result.allowShort) "shorts allowed" else "shorts forbidden"),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -173,14 +174,14 @@ private fun SummaryCard(result: AnalysisResult) {
         if (ratios != null) {
             val passed = result.tangencyVerified == true
             Text(
-                "Verification: ${if (passed) "PASS" else "FAIL"} · (μᵢ − rf) / Cov(rᵢ, r_T) is " +
-                    (if (passed) "the same" else "not the same") + " for every asset (${"%.6f".format(ratios.min())} to ${"%.6f".format(ratios.max())})",
+                tr(if (passed) "Verification: PASS · (μᵢ − rf) / Cov(rᵢ, r_T) is the same for every asset (%s to %s)" else "Verification: FAIL · (μᵢ − rf) / Cov(rᵢ, r_T) is not the same for every asset (%s to %s)")
+                    .format("%.6f".format(ratios.min()), "%.6f".format(ratios.max())),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (passed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
             )
         } else {
             Text(
-                "Verification skipped: it only applies when short selling is allowed.",
+                tr("Verification skipped: it only applies when short selling is allowed."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -213,16 +214,16 @@ private fun ReportActions(viewModel: PortfolioViewModel, result: AnalysisResult)
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null, Modifier.size(18.dp))
-            Text(if (exportingPdf) "Creating PDF…" else "Share PDF report", Modifier.padding(start = 8.dp))
+            Text(tr(if (exportingPdf) "Creating PDF…" else "Share PDF report"), Modifier.padding(start = 8.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { copyToClipboard(context, report()) }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(18.dp))
-                Text("Copy report", Modifier.padding(start = 8.dp))
+                Text(tr("Copy report"), Modifier.padding(start = 8.dp))
             }
             OutlinedButton(onClick = { shareText(context, report(), "output.txt") }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
-                Text("Share .txt", Modifier.padding(start = 8.dp))
+                Text(tr("Share .txt"), Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -239,7 +240,7 @@ private fun ChartCard(title: String, fileName: String, content: @Composable (Mod
         content(Modifier.recordInto(layer))
         TextButton(onClick = { scope.launch { shareImage(context, layer.toImageBitmap(), background, fileName) } }) {
             Icon(Icons.Default.Share, contentDescription = null, Modifier.size(18.dp))
-            Text("Share PNG", Modifier.padding(start = 8.dp))
+            Text(tr("Share PNG"), Modifier.padding(start = 8.dp))
         }
     }
 }
@@ -251,11 +252,11 @@ private fun GlossaryCard() {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }, verticalAlignment = Alignment.CenterVertically) {
-                Text("What these numbers mean", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Collapse" else "Expand")
+                Text(tr("What these numbers mean"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = tr(if (expanded) "Collapse" else "Expand"))
             }
             if (expanded) {
-                listOf("Parameters" to Glossary.parameters, "Metrics" to Glossary.metrics).forEach { (title, entries) ->
+                listOf(tr("Parameters") to Glossary.parameters, tr("Metrics") to Glossary.metrics).forEach { (title, entries) ->
                     Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                     entries.forEach { entry ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -276,14 +277,14 @@ private fun IntermediateCard(result: AnalysisResult) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Intermediate values", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(tr("Intermediate values"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 if (expanded) {
                     IconButton(onClick = { copyToClipboard(context, Report.intermediate(result)) }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy intermediate values")
+                        Icon(Icons.Default.ContentCopy, contentDescription = tr("Copy intermediate values"))
                     }
                 }
                 IconButton(onClick = { expanded = !expanded }) {
-                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = if (expanded) "Collapse" else "Expand")
+                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = tr(if (expanded) "Collapse" else "Expand"))
                 }
             }
             if (expanded) {
@@ -312,15 +313,15 @@ private fun StatTile(label: String, value: String, modifier: Modifier = Modifier
 @Composable
 private fun ChartLegend(result: AnalysisResult) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        LegendItem(MaterialTheme.colorScheme.primary, "Frontier")
-        LegendItem(CmlColor, "CML / risk-free")
-        LegendItem(TangencyColor, "Tangency")
-        LegendItem(MaterialTheme.colorScheme.onSurfaceVariant, "Assets")
-        if (result.current != null) LegendItem(CurrentColor, "My portfolio")
-        if (result.hypothetical != null) LegendItem(HypotheticalColor, "Hypothetical")
+        LegendItem(MaterialTheme.colorScheme.primary, tr("Frontier"))
+        LegendItem(CmlColor, tr("CML / risk-free"))
+        LegendItem(TangencyColor, tr("Tangency"))
+        LegendItem(MaterialTheme.colorScheme.onSurfaceVariant, tr("Assets"))
+        if (result.current != null) LegendItem(CurrentColor, tr("My portfolio"))
+        if (result.hypothetical != null) LegendItem(HypotheticalColor, tr("Hypothetical"))
     }
     Text(
-        "x: annual volatility · y: annual expected return",
+        tr("x: annual volatility · y: annual expected return"),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -357,8 +358,8 @@ private fun TableRow(cells: List<String>, header: Boolean = false, firstWeight: 
 private fun WeightsCard(result: AnalysisResult, portfolios: List<PortfolioSummary>) {
     val order = result.tickers.indices.sortedByDescending { result.tangency.weights[it] }
     val largest = result.tangency.weights.maxOf { abs(it) }.coerceAtLeast(1e-9)
-    SectionCard("Weights") {
-        TableRow(listOf("Asset", "") + portfolios.map { it.name }, header = true)
+    SectionCard(tr("Weights")) {
+        TableRow(listOf(tr("Asset"), "") + portfolios.map { tr(it.name) }, header = true)
         order.forEach { index ->
             val weight = result.tangency.weights[index]
             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -387,24 +388,24 @@ private fun WeightsCard(result: AnalysisResult, portfolios: List<PortfolioSummar
 
 @Composable
 private fun ComparisonCard(result: AnalysisResult, portfolios: List<PortfolioSummary>) {
-    SectionCard("Portfolio comparison") {
-        TableRow(listOf("") + portfolios.map { it.name }, header = true)
-        TableRow(listOf("Expected return") + portfolios.map { it.stats.expectedReturn.percent() })
-        TableRow(listOf("Volatility") + portfolios.map { it.stats.volatility.percent() })
-        TableRow(listOf("Sharpe ratio") + portfolios.map { "%.4f".format(it.stats.sharpeRatio) })
+    SectionCard(tr("Portfolio comparison")) {
+        TableRow(listOf("") + portfolios.map { tr(it.name) }, header = true)
+        TableRow(listOf(tr("Expected return")) + portfolios.map { it.stats.expectedReturn.percent() })
+        TableRow(listOf(tr("Volatility")) + portfolios.map { it.stats.volatility.percent() })
+        TableRow(listOf(tr("Sharpe ratio")) + portfolios.map { "%.4f".format(it.stats.sharpeRatio) })
         if (result.marketProxy != null) {
-            TableRow(listOf("Market beta") + portfolios.map { "%.4f".format(it.marketBeta) })
-            TableRow(listOf("BBG adj. beta") + portfolios.map { "%.4f".format(it.adjustedBeta) })
+            TableRow(listOf(tr("Market beta")) + portfolios.map { "%.4f".format(it.marketBeta) })
+            TableRow(listOf(tr("BBG adj. beta")) + portfolios.map { "%.4f".format(it.adjustedBeta) })
         }
-        TableRow(listOf("Sharpe gap vs T") + portfolios.map { "%.4f".format(result.tangency.stats.sharpeRatio - it.stats.sharpeRatio) })
+        TableRow(listOf(tr("Sharpe gap vs T")) + portfolios.map { "%.4f".format(result.tangency.stats.sharpeRatio - it.stats.sharpeRatio) })
     }
 }
 
 @Composable
 private fun BetasCard(result: AnalysisResult) {
     val proxy = result.marketProxy
-    SectionCard("Betas") {
-        val header = listOf("Asset", "E[r]", "σ", "β tangency") + if (proxy != null) listOf("β $proxy", "Adj. β") else emptyList()
+    SectionCard(tr("Betas")) {
+        val header = listOf(tr("Asset"), "E[r]", "σ", tr("β tangency")) + if (proxy != null) listOf("β $proxy", tr("Adj. β")) else emptyList()
         TableRow(header, header = true, firstWeight = 1.2f)
         result.tickers.indices.forEach { index ->
             val cells = listOf(
@@ -421,7 +422,7 @@ private fun BetasCard(result: AnalysisResult) {
         }
         if (proxy != null) {
             Text(
-                "Adjusted β = 0.66 × β + 0.34 (Bloomberg shrinkage toward 1)",
+                tr("Adjusted β = 0.66 × β + 0.34 (Bloomberg shrinkage toward 1)"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -436,15 +437,15 @@ private fun AllocationCard(viewModel: PortfolioViewModel, result: AnalysisResult
     val chosenAversion = parseNumber(settings.riskAversion)?.takeIf { it > 0 }
     val aversions = (listOf(1.0, 2.0, 5.0) + listOfNotNull(chosenAversion)).distinct().sorted()
 
-    SectionCard("Capital Market Line") {
+    SectionCard(tr("Capital Market Line")) {
         Text(
             "E[r] = ${result.riskFreeRate.percent()} + ${"%.4f".format(tangency.sharpeRatio)} × σ",
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
         )
         Text(
-            "Your mix of risk-free and tangency depends on risk aversion A. Higher A is more conservative; " +
-                "a tangency share above 100% means borrowing at the risk-free rate.",
+            tr("Your mix of risk-free and tangency depends on risk aversion A. Higher A is more conservative; ") +
+                tr("a tangency share above 100% means borrowing at the risk-free rate."),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -452,7 +453,7 @@ private fun AllocationCard(viewModel: PortfolioViewModel, result: AnalysisResult
             OutlinedTextField(
                 value = settings.riskAversion,
                 onValueChange = { value -> viewModel.update { it.copy(riskAversion = value) } },
-                label = { Text("Risk aversion A") },
+                label = { Text(tr("Risk aversion A")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
@@ -460,19 +461,19 @@ private fun AllocationCard(viewModel: PortfolioViewModel, result: AnalysisResult
             OutlinedTextField(
                 value = settings.capital,
                 onValueChange = { value -> viewModel.update { it.copy(capital = value) } },
-                label = { Text("Capital") },
+                label = { Text(tr("Capital")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
             )
         }
-        TableRow(listOf("A", "Tangency", "Risk-free", "E[r]", "σ"), header = true, firstWeight = 0.8f)
+        TableRow(listOf("A", tr("Tangency"), tr("Risk-free"), "E[r]", "σ"), header = true, firstWeight = 0.8f)
         aversions.forEach { aversion ->
             val allocation = PortfolioMath.cmlAllocation(aversion, result.riskFreeRate, tangency)
             val label = when {
-                aversion >= 5 -> "conservative"
-                aversion >= 2 -> "moderate"
-                else -> "aggressive"
+                aversion >= 5 -> tr("conservative")
+                aversion >= 2 -> tr("moderate")
+                else -> tr("aggressive")
             }
             TableRow(
                 listOf(
@@ -492,17 +493,17 @@ private fun AllocationCard(viewModel: PortfolioViewModel, result: AnalysisResult
             val tangencyWeight = chosenAversion?.let { PortfolioMath.cmlAllocation(it, result.riskFreeRate, tangency).tangencyWeight } ?: 1.0
             val allocation = PortfolioMath.capitalAllocation(capital, tangencyWeight, result.tangency.weights, result.lastPrices)
             HorizontalDivider()
-            Text("Capital allocation", style = MaterialTheme.typography.titleSmall)
+            Text(tr("Capital allocation"), style = MaterialTheme.typography.titleSmall)
             Text(
-                "In tangency ${tangencyWeight.percent(1)} (${money(capital * tangencyWeight)}) · " +
-                    "risk-free ${(1 - tangencyWeight).percent(1)} (${money(allocation.riskFreeAmount)})" +
-                    if (chosenAversion == null) " · set A to split with the risk-free asset" else "",
+                tr("In tangency %s (%s) · risk-free %s (%s)").format(
+                    tangencyWeight.percent(1), money(capital * tangencyWeight), (1 - tangencyWeight).percent(1), money(allocation.riskFreeAmount),
+                ) + if (chosenAversion == null) tr(" · set A to split with the risk-free asset") else "",
                 style = MaterialTheme.typography.bodySmall,
             )
             if (tangencyWeight > 1) {
-                Text("Negative risk-free amount means borrowing to buy more stocks.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(tr("Negative risk-free amount means borrowing to buy more stocks."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
-            TableRow(listOf("Asset", "Target", "Price", "Shares", "Cost"), header = true, firstWeight = 1.1f)
+            TableRow(listOf(tr("Asset"), tr("Target"), tr("Price"), tr("Shares"), tr("Cost")), header = true, firstWeight = 1.1f)
             result.tickers.indices.filter { abs(allocation.targets[it]) > 0.005 }.forEach { index ->
                 TableRow(
                     listOf(
@@ -516,7 +517,7 @@ private fun AllocationCard(viewModel: PortfolioViewModel, result: AnalysisResult
                 )
             }
             Text(
-                "Leftover cash from rounding down: ${money(allocation.leftover)}. Prices are the last close in the window.",
+                tr("Leftover cash from rounding down: %s. Prices are the last close in the window.").format(money(allocation.leftover)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -528,16 +529,16 @@ private fun money(value: Double) = "%,.2f".format(value)
 
 @Composable
 private fun DataCard(result: AnalysisResult) {
-    SectionCard("Data & assumptions") {
-        TableRow(listOf("Interval", "${result.startDate} → ${result.endDate}"), firstWeight = 1f)
-        TableRow(listOf("Frequency", "${result.frequency.label} (${result.frequency.periodsPerYear}/year)"), firstWeight = 1f)
-        TableRow(listOf("Observations", "${result.observations} returns"), firstWeight = 1f)
-        TableRow(listOf("Risk-free rate", "${result.riskFreeRate.percent()} (${result.riskFreeSource})"), firstWeight = 1f)
-        TableRow(listOf("Market proxy", result.marketProxy ?: "none"), firstWeight = 1f)
+    SectionCard(tr("Data & assumptions")) {
+        TableRow(listOf(tr("Interval"), "${result.startDate} → ${result.endDate}"), firstWeight = 1f)
+        TableRow(listOf(tr("Frequency"), tr("%s (%d/year)").format(result.frequency.label, result.frequency.periodsPerYear)), firstWeight = 1f)
+        TableRow(listOf(tr("Observations"), tr("%d returns").format(result.observations)), firstWeight = 1f)
+        TableRow(listOf(tr("Risk-free rate"), "${result.riskFreeRate.percent()} (${result.riskFreeSource})"), firstWeight = 1f)
+        TableRow(listOf(tr("Market proxy"), result.marketProxy ?: tr("none")), firstWeight = 1f)
         Text(
-            "Mean-variance assumes Gaussian, i.i.d. returns and that past returns persist. Thin trading distorts " +
-                "covariances, CAPM misses size/value/momentum effects, and the CML assumes you borrow at the " +
-                "risk-free rate. Match the risk-free maturity to your horizon. This is analysis, not investment advice.",
+            tr("Mean-variance assumes Gaussian, i.i.d. returns and that past returns persist. Thin trading distorts ") +
+                tr("covariances, CAPM misses size/value/momentum effects, and the CML assumes you borrow at the ") +
+                tr("risk-free rate. Match the risk-free maturity to your horizon. This is analysis, not investment advice."),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

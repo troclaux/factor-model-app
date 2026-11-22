@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.buddy.budget.i18n.tr
 
 @Composable
 fun ExpenseRow(
@@ -73,10 +74,10 @@ fun ExpenseRow(
             modifier = Modifier.width(120.dp)
         )
         IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit $name", Modifier.size(20.dp))
+            Icon(Icons.Default.Edit, contentDescription = tr("Edit %s").format(name), Modifier.size(20.dp))
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete $name", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
+            Icon(Icons.Default.Delete, contentDescription = tr("Delete %s").format(name), Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
         }
     }
 }

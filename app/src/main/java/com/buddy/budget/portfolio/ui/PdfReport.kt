@@ -17,6 +17,7 @@ import java.io.File
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.min
+import com.buddy.budget.i18n.tr
 
 /** The analysis as a styled A4 PDF: header, summary tiles, charts and tables, paginated. Units are points. */
 class PdfReport(
@@ -26,7 +27,7 @@ class PdfReport(
     private val settings: PortfolioSettings,
     private val riskAversion: Double?,
     private val capital: Double?,
-) : PdfWriter(context, "Buddy · Portfolio analysis") {
+) : PdfWriter(context, tr("Buddy · Portfolio analysis")) {
     private val chartPalette = ChartPalette(
         frontier = Color(ACCENT),
         asset = Color(MUTED),
@@ -59,64 +60,64 @@ class PdfReport(
 
     private fun header() {
         header(
-            "Portfolio analysis",
-            "${result.startDate} → ${result.endDate}  ·  ${result.observations} ${result.frequency.label.lowercase()} returns  ·  " +
-                "generated ${LocalDate.now()}",
+            tr("Portfolio analysis"),
+            "${result.startDate} → ${result.endDate}  ·  " + tr("%d %s returns").format(result.observations, result.frequency.label.lowercase()) + "  ·  " +
+                tr("generated %s").format(LocalDate.now()),
         )
     }
 
     private fun inputs() {
-        section("Inputs used")
+        section(tr("Inputs used"))
         fun describe(input: PortfolioInput): String {
             val filled = input.values.values.count { (parseNumber(it) ?: 0.0) != 0.0 }
-            return if (filled == 0) "not set" else "$filled positions, entered as ${input.mode.label.lowercase().removeSuffix(" %")}"
+            return if (filled == 0) tr("not set") else tr("%d positions, entered as %s").format(filled, input.mode.label.lowercase().removeSuffix(" %"))
         }
         table(
             headers = null,
             rows = listOf(
-                listOf("Risk-free rate", "${result.riskFreeRate.percent()} (${result.riskFreeSource})"),
+                listOf(tr("Risk-free rate"), "${result.riskFreeRate.percent()} (${result.riskFreeSource})"),
                 listOf(
-                    "Period",
+                    tr("Period"),
                     when (settings.periodMode) {
-                        PeriodMode.LOOKBACK -> "${settings.lookbackAmount.trim()} ${settings.lookbackUnit.label.lowercase()} back from the end of the previous month"
-                        PeriodMode.DATES -> "${settings.startDate} to " + if (settings.endLatest) "the latest available close" else settings.endDate
+                        PeriodMode.LOOKBACK -> tr("%s %s back from the end of the previous month").format(settings.lookbackAmount.trim(), settings.lookbackUnit.label.lowercase())
+                        PeriodMode.DATES -> tr("%s to %s").format(settings.startDate, if (settings.endLatest) tr("the latest available close") else settings.endDate)
                     },
                 ),
-                listOf("Price window", "${result.priceDates.first()} → ${result.endDate} (first and last prices used)"),
-                listOf("Return frequency", "${result.frequency.label} (${result.frequency.periodsPerYear} periods per year)"),
-                listOf("Observations", "${result.observations} returns"),
-                listOf("Short selling", if (result.allowShort) "allowed" else "forbidden (all weights ≥ 0)"),
-                listOf("Market benchmark", result.marketProxy ?: "none"),
-                listOf("Risk aversion A", riskAversion?.let { "%.1f (A = 1, 2 and 5 also shown)".format(it) } ?: "not set (A = 1, 2 and 5 shown)"),
-                listOf("Capital", capital?.let { money(it) } ?: "not set"),
-                listOf("My portfolio", describe(settings.current)),
-                listOf("Hypothetical portfolio", describe(settings.hypothetical)),
-                listOf("Prices", "Yahoo Finance adjusted closes"),
+                listOf(tr("Price window"), "${result.priceDates.first()} → ${result.endDate} " + tr("(first and last prices used)")),
+                listOf(tr("Return frequency"), tr("%s (%d periods per year)").format(result.frequency.label, result.frequency.periodsPerYear)),
+                listOf(tr("Observations"), tr("%d returns").format(result.observations)),
+                listOf(tr("Short selling"), tr(if (result.allowShort) "allowed" else "forbidden (all weights ≥ 0)")),
+                listOf(tr("Market benchmark"), result.marketProxy ?: tr("none")),
+                listOf(tr("Risk aversion A"), riskAversion?.let { tr("%s (A = 1, 2 and 5 also shown)").format("%.1f".format(it)) } ?: tr("not set (A = 1, 2 and 5 shown)")),
+                listOf(tr("Capital"), capital?.let { money(it) } ?: tr("not set")),
+                listOf(tr("My portfolio"), describe(settings.current)),
+                listOf(tr("Hypothetical portfolio"), describe(settings.hypothetical)),
+                listOf(tr("Prices"), tr("Yahoo Finance adjusted closes")),
             ),
         )
-        paragraph("Tickers (${result.tickers.size}): " + result.tickers.joinToString(", "), color = TEXT)
+        paragraph(tr("Tickers (%d): ").format(result.tickers.size) + result.tickers.joinToString(", "), color = TEXT)
     }
 
     private fun summary() {
-        section("Tangency portfolio")
+        section(tr("Tangency portfolio"))
         val tangency = result.tangency
         val tiles = mutableListOf(
-            "Expected return" to tangency.stats.expectedReturn.percent(),
-            "Volatility" to tangency.stats.volatility.percent(),
-            "Sharpe ratio" to "%.4f".format(tangency.stats.sharpeRatio),
+            tr("Expected return") to tangency.stats.expectedReturn.percent(),
+            tr("Volatility") to tangency.stats.volatility.percent(),
+            tr("Sharpe ratio") to "%.4f".format(tangency.stats.sharpeRatio),
         )
         if (tangency.marketBeta != null && tangency.adjustedBeta != null) {
-            tiles += "Market beta (${result.marketProxy})" to "%.4f".format(tangency.marketBeta)
-            tiles += "Bloomberg adj. beta" to "%.4f".format(tangency.adjustedBeta)
+            tiles += tr("Market beta (%s)").format(result.marketProxy) to "%.4f".format(tangency.marketBeta)
+            tiles += tr("Bloomberg adj. beta") to "%.4f".format(tangency.adjustedBeta)
         }
-        tiles += "Risk-free rate" to result.riskFreeRate.percent()
+        tiles += tr("Risk-free rate") to result.riskFreeRate.percent()
         statTiles(tiles)
 
         val verified = result.tangencyVerified
         when {
-            verified == null -> paragraph("Verification skipped: it only applies when short selling is allowed.")
-            verified -> paragraph("✓ Verification passed: (μᵢ − rf) / Cov(rᵢ, r_T) is the same for every asset.", color = ACCENT)
-            else -> paragraph("✗ Verification failed: (μᵢ − rf) / Cov(rᵢ, r_T) differs across assets.", color = ERROR)
+            verified == null -> paragraph(tr("Verification skipped: it only applies when short selling is allowed."))
+            verified -> paragraph(tr("✓ Verification passed: (μᵢ − rf) / Cov(rᵢ, r_T) is the same for every asset."), color = ACCENT)
+            else -> paragraph(tr("✗ Verification failed: (μᵢ − rf) / Cov(rᵢ, r_T) differs across assets."), color = ERROR)
         }
     }
 
@@ -127,7 +128,7 @@ class PdfReport(
         val height = 30f + layouts.sumOf { it.height + 4 }
         ensure(height + 12f)
         canvas.drawRoundRect(RectF(MARGIN, cursor, MARGIN + CONTENT_WIDTH, cursor + height), 8f, 8f, fill(WARNING_BACKGROUND))
-        canvas.drawText("Warnings", MARGIN + 12f, cursor + 18f, text(11f, WARNING_TEXT, bold = true))
+        canvas.drawText(tr("Warnings"), MARGIN + 12f, cursor + 18f, text(11f, WARNING_TEXT, bold = true))
         var top = cursor + 26f
         layouts.forEach { layout ->
             drawLayout(layout, MARGIN + 12f, top)
@@ -137,12 +138,12 @@ class PdfReport(
     }
 
     private fun meanVariance() {
-        section("Mean-variance diagram")
+        section(tr("Mean-variance diagram"))
         drawing(300f) { drawMeanVariance(result, measurer, chartPalette) }
         cursor += 8f
-        val legend = mutableListOf(ACCENT to "Frontier", CmlColor.toArgb() to "CML", TangencyColor.toArgb() to "Tangency", MUTED to "Assets")
-        result.current?.let { legend += CurrentColor.toArgb() to it.name }
-        result.hypothetical?.let { legend += HypotheticalColor.toArgb() to it.name }
+        val legend = mutableListOf(ACCENT to tr("Frontier"), CmlColor.toArgb() to "CML", TangencyColor.toArgb() to tr("Tangency"), MUTED to tr("Assets"))
+        result.current?.let { legend += CurrentColor.toArgb() to tr(it.name) }
+        result.hypothetical?.let { legend += HypotheticalColor.toArgb() to tr(it.name) }
         ensure(16f)
         var x = MARGIN
         val paint = text(9f, TEXT)
@@ -152,15 +153,15 @@ class PdfReport(
             x += 22f + paint.measureText(label)
         }
         cursor += 16f
-        paragraph("x: annual volatility · y: annual expected return. Solid frontier is efficient; dashed is not.")
+        paragraph(tr("x: annual volatility · y: annual expected return. Solid frontier is efficient; dashed is not."))
     }
 
     private fun weights() {
-        section("Weights")
+        section(tr("Weights"))
         val portfolios = listOfNotNull(result.tangency, result.current, result.hypothetical)
         val order = result.tickers.indices.sortedByDescending { result.tangency.weights[it] }
         table(
-            headers = listOf("Asset") + portfolios.map { it.name },
+            headers = listOf(tr("Asset")) + portfolios.map { tr(it.name) },
             rows = order.map { index -> listOf(shortTicker(result.tickers[index])) + portfolios.map { it.weights[index].percent(1) } },
             highlightColumn = 1,
         )
@@ -168,17 +169,17 @@ class PdfReport(
 
     /** Each stock's share of each portfolio's value. Short positions cannot be drawn as slices and are listed instead. */
     private fun allocationPies() {
-        section("Allocation by value")
+        section(tr("Allocation by value"))
         // Colors follow the ticker list, so a stock has the same color in every pie.
         val colors = result.tickers.withIndex().associate { (index, ticker) -> shortTicker(ticker) to pieColor(index) }
         listOfNotNull(result.tangency, result.current, result.hypothetical).forEach { portfolio ->
-            paragraph(portfolio.name, size = 11f, color = TEXT, bold = true)
+            paragraph(tr(portfolio.name), size = 11f, color = TEXT, bold = true)
             pie(result.tickers.indices.map { shortTicker(result.tickers[it]) to portfolio.weights[it] }) { label -> colors.getValue(label) }
             val shorts = result.tickers.indices.filter { portfolio.weights[it] < -1e-9 }
             if (shorts.isNotEmpty()) {
                 paragraph(
-                    "Short positions, not shown: " + shorts.joinToString { "${shortTicker(result.tickers[it])} ${portfolio.weights[it].percent(1)}" } +
-                        ". Slices are shares of the long positions.",
+                    tr("Short positions, not shown: ") + shorts.joinToString { "${shortTicker(result.tickers[it])} ${portfolio.weights[it].percent(1)}" } +
+                        tr(". Slices are shares of the long positions."),
                 )
             }
         }
@@ -187,24 +188,24 @@ class PdfReport(
     private fun comparison() {
         val portfolios = listOfNotNull(result.tangency, result.current, result.hypothetical)
         if (portfolios.size < 2) return
-        section("Portfolio comparison")
+        section(tr("Portfolio comparison"))
         val rows = mutableListOf(
-            listOf("Expected return") + portfolios.map { it.stats.expectedReturn.percent() },
-            listOf("Volatility") + portfolios.map { it.stats.volatility.percent() },
-            listOf("Sharpe ratio") + portfolios.map { "%.4f".format(it.stats.sharpeRatio) },
+            listOf(tr("Expected return")) + portfolios.map { it.stats.expectedReturn.percent() },
+            listOf(tr("Volatility")) + portfolios.map { it.stats.volatility.percent() },
+            listOf(tr("Sharpe ratio")) + portfolios.map { "%.4f".format(it.stats.sharpeRatio) },
         )
         if (result.marketProxy != null) {
-            rows += listOf("Market beta") + portfolios.map { "%.4f".format(it.marketBeta) }
-            rows += listOf("Bloomberg adj. beta") + portfolios.map { "%.4f".format(it.adjustedBeta) }
+            rows += listOf(tr("Market beta")) + portfolios.map { "%.4f".format(it.marketBeta) }
+            rows += listOf(tr("Bloomberg adj. beta")) + portfolios.map { "%.4f".format(it.adjustedBeta) }
         }
-        rows += listOf("Sharpe gap vs tangency") + portfolios.map { "%.4f".format(result.tangency.stats.sharpeRatio - it.stats.sharpeRatio) }
-        table(listOf("") + portfolios.map { it.name }, rows)
+        rows += listOf(tr("Sharpe gap vs tangency")) + portfolios.map { "%.4f".format(result.tangency.stats.sharpeRatio - it.stats.sharpeRatio) }
+        table(listOf("") + portfolios.map { tr(it.name) }, rows)
     }
 
     private fun betas() {
-        section("Assets and betas")
+        section(tr("Assets and betas"))
         val proxy = result.marketProxy
-        val headers = listOf("Asset", "E[r]", "σ", "β tangency") + if (proxy != null) listOf("β $proxy", "Adj. β") else emptyList()
+        val headers = listOf(tr("Asset"), "E[r]", "σ", tr("β tangency")) + if (proxy != null) listOf("β $proxy", tr("Adj. β")) else emptyList()
         val rows = result.tickers.indices.map { index ->
             listOf(
                 shortTicker(result.tickers[index]),
@@ -218,25 +219,25 @@ class PdfReport(
             }
         }
         table(headers, rows)
-        if (proxy != null) paragraph("Adjusted β = 0.66 × β + 0.34 (Bloomberg shrinkage toward 1).")
+        if (proxy != null) paragraph(tr("Adjusted β = 0.66 × β + 0.34 (Bloomberg shrinkage toward 1)."))
     }
 
     private fun capitalMarketLine() {
-        section("Capital Market Line")
+        section(tr("Capital Market Line"))
         val tangency = result.tangency.stats
         paragraph("E[r] = ${result.riskFreeRate.percent()} + ${"%.4f".format(tangency.sharpeRatio)} × σ", size = 12f, color = TEXT, bold = true)
-        paragraph("How to split between the risk-free asset and the tangency portfolio for each risk aversion A. A tangency share above 100% means borrowing at the risk-free rate.")
+        paragraph(tr("How to split between the risk-free asset and the tangency portfolio for each risk aversion A. A tangency share above 100% means borrowing at the risk-free rate."))
         val aversions = (listOf(1.0, 2.0, 5.0) + listOfNotNull(riskAversion)).distinct().sorted()
         table(
-            headers = listOf("A", "Profile", "Tangency", "Risk-free", "E[r]", "σ"),
+            headers = listOf("A", tr("Profile"), tr("Tangency"), tr("Risk-free"), "E[r]", "σ"),
             rows = aversions.map { aversion ->
                 val allocation = PortfolioMath.cmlAllocation(aversion, result.riskFreeRate, tangency)
                 listOf(
                     "%.1f".format(aversion) + if (aversion == riskAversion) " ★" else "",
                     when {
-                        aversion >= 5 -> "Conservative"
-                        aversion >= 2 -> "Moderate"
-                        else -> "Aggressive"
+                        aversion >= 5 -> tr("Conservative")
+                        aversion >= 2 -> tr("Moderate")
+                        else -> tr("Aggressive")
                     },
                     allocation.tangencyWeight.percent(1),
                     allocation.riskFreeWeight.percent(1),
@@ -251,16 +252,16 @@ class PdfReport(
         val capital = capital ?: return
         val tangencyWeight = riskAversion?.let { PortfolioMath.cmlAllocation(it, result.riskFreeRate, result.tangency.stats).tangencyWeight } ?: 1.0
         val allocation = PortfolioMath.capitalAllocation(capital, tangencyWeight, result.tangency.weights, result.lastPrices)
-        section("Capital allocation · ${money(capital)}")
+        section(tr("Capital allocation · %s").format(money(capital)))
         statTiles(
             listOf(
-                "In tangency (${tangencyWeight.percent(1)})" to money(capital * tangencyWeight),
-                "Risk-free" to money(allocation.riskFreeAmount),
-                "Leftover from rounding" to money(allocation.leftover),
+                tr("In tangency (%s)").format(tangencyWeight.percent(1)) to money(capital * tangencyWeight),
+                tr("Risk-free") to money(allocation.riskFreeAmount),
+                tr("Leftover from rounding") to money(allocation.leftover),
             ),
         )
         table(
-            headers = listOf("Asset", "Target", "Price", "Shares", "Cost"),
+            headers = listOf(tr("Asset"), tr("Target"), tr("Price"), tr("Shares"), tr("Cost")),
             rows = result.tickers.indices.filter { abs(allocation.targets[it]) > 0.005 }.map { index ->
                 listOf(
                     shortTicker(result.tickers[index]),
@@ -271,30 +272,30 @@ class PdfReport(
                 )
             },
         )
-        paragraph("Whole shares, rounded down, at the last close in the window." + if (riskAversion == null) " Set A in the app to split with the risk-free asset." else "")
+        paragraph(tr("Whole shares, rounded down, at the last close in the window.") + if (riskAversion == null) tr(" Set A in the app to split with the risk-free asset.") else "")
     }
 
     private fun correlation() {
-        section("Correlation of returns")
+        section(tr("Correlation of returns"))
         val labelSpace = 52f
         val cell = min(40f, (CONTENT_WIDTH - labelSpace) / result.tickers.size)
         drawing(labelSpace + cell * result.tickers.size) { drawCorrelation(result, measurer, chartPalette, labelSpace, cell) }
         cursor += 6f
-        paragraph("Pearson correlation of ${result.frequency.label.lowercase()} returns. Red is positive, blue is negative.")
+        paragraph(tr("Pearson correlation of %s returns. Red is positive, blue is negative.").format(result.frequency.label.lowercase()))
     }
 
     private fun assumptions() {
-        section("Assumptions")
+        section(tr("Assumptions"))
         paragraph(
-            "Mean-variance assumes Gaussian, i.i.d. returns and that past returns persist. Thin trading distorts covariances, " +
-                "CAPM misses size/value/momentum effects, and the CML assumes you borrow at the risk-free rate. Match the " +
-                "risk-free maturity to your horizon. This is analysis, not investment advice.",
+            tr("Mean-variance assumes Gaussian, i.i.d. returns and that past returns persist. Thin trading distorts ") +
+                tr("covariances, CAPM misses size/value/momentum effects, and the CML assumes you borrow at the ") +
+                tr("risk-free rate. Match the risk-free maturity to your horizon. This is analysis, not investment advice."),
         )
     }
 
     private fun glossary() {
-        section("What these numbers mean")
-        listOf("Parameters" to Glossary.parameters, "Metrics" to Glossary.metrics).forEach { (title, entries) ->
+        section(tr("What these numbers mean"))
+        listOf(tr("Parameters") to Glossary.parameters, tr("Metrics") to Glossary.metrics).forEach { (title, entries) ->
             paragraph(title, size = 11f, color = ACCENT, bold = true)
             entries.forEach { entry ->
                 val term = staticLayout(entry.term, textPaint(9.5f, TEXT, bold = true), CONTENT_WIDTH)

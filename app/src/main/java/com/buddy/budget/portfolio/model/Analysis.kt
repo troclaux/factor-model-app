@@ -1,6 +1,7 @@
 package com.buddy.budget.portfolio.model
 
 import java.time.LocalDate
+import com.buddy.budget.i18n.tr
 
 data class PortfolioSummary(
     val name: String,
@@ -65,8 +66,8 @@ object Analysis {
 
         val minVarianceReturn = PortfolioMath.minVarianceReturn(expected, cov)
         if (riskFreeRate >= minVarianceReturn) {
-            warnings += "Risk-free rate (${riskFreeRate.percent()}) is at or above the minimum-variance portfolio " +
-                "return (${minVarianceReturn.percent()}). The tangency portfolio may not exist or may be degenerate."
+            warnings += tr("Risk-free rate (%s) is at or above the minimum-variance portfolio return (%s). The tangency portfolio may not exist or may be degenerate.")
+                .format(riskFreeRate.percent(), minVarianceReturn.percent())
         }
 
         val tangencyWeights = if (allowShort) {
@@ -99,7 +100,7 @@ object Analysis {
                 InputMode.WEIGHTS -> {
                     val total = values.sum()
                     if (kotlin.math.abs(total - 100.0) > 0.5) {
-                        warnings += "$name weights add up to ${"%.1f".format(total)}%, not 100%."
+                        warnings += tr("%s weights add up to %s%%, not 100%%.").format(tr(name), "%.1f".format(total))
                     }
                     DoubleArray(values.size) { values[it] / 100.0 }
                 }
@@ -108,12 +109,12 @@ object Analysis {
         }
 
         tickers.forEachIndexed { index, ticker ->
-            if (tangencyWeights[index] < -1e-9) warnings += "$ticker has a short position (${tangencyWeights[index].percent()})."
+            if (tangencyWeights[index] < -1e-9) warnings += tr("%s has a short position (%s).").format(ticker, tangencyWeights[index].percent())
         }
         val tangencyRatios = if (allowShort) PortfolioMath.tangencyRatios(tangencyWeights, expected, cov, riskFreeRate) else null
 
         if (assetReturns.size < 60) {
-            warnings += "Small sample (${assetReturns.size} observations). Estimates may be unreliable."
+            warnings += tr("Small sample (%d observations). Estimates may be unreliable.").format(assetReturns.size)
         }
 
         return AnalysisResult(

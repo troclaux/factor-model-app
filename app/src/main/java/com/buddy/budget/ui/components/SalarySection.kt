@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.buddy.budget.model.BudgetDraft
+import com.buddy.budget.i18n.tr
 
 /** Net salary, leftover, proventos and the optional fatura lump sum. */
 @Composable
@@ -42,7 +43,7 @@ fun SalarySection(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Income",
+                text = tr("Income"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -50,21 +51,21 @@ fun SalarySection(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AmountField("Net salary", draft.salary, onSalaryChange, Modifier.weight(1f))
-                AmountField("Leftover", draft.leftover, onLeftoverChange, Modifier.weight(1f), supporting = leftoverHint)
+                AmountField(tr("Net salary"), draft.salary, onSalaryChange, Modifier.weight(1f))
+                AmountField(tr("Leftover"), draft.leftover, onLeftoverChange, Modifier.weight(1f), supporting = leftoverHint)
             }
             AmountField(
-                "Proventos",
+                tr("Proventos"),
                 draft.proventos,
                 onProventosChange,
                 Modifier.fillMaxWidth(),
-                supporting = "Income such as dividends; an inflow of its own, not taken off the fatura",
+                supporting = tr("Income such as dividends; an inflow of its own, not taken off the fatura"),
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Fatura as one total", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(tr("Fatura as one total"), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(
-                        "Use the card bill's total instead of itemizing fatura expenses",
+                        tr("Use the card bill's total instead of itemizing fatura expenses"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -72,7 +73,7 @@ fun SalarySection(
                 Switch(checked = draft.useFaturaLump, onCheckedChange = onUseFaturaLumpChange)
             }
             if (draft.useFaturaLump) {
-                AmountField("Fatura total", draft.faturaLump, onFaturaLumpChange, Modifier.fillMaxWidth())
+                AmountField(tr("Fatura total"), draft.faturaLump, onFaturaLumpChange, Modifier.fillMaxWidth())
             }
         }
     }

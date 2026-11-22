@@ -21,15 +21,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.buddy.budget.i18n.AppLanguage
 import com.buddy.budget.portfolio.PortfolioViewModel
 import com.buddy.budget.portfolio.ui.PortfolioScreen
 import com.buddy.budget.ui.BudgetScreen
 import com.buddy.budget.ui.theme.BuddyTheme
 import com.buddy.budget.viewmodel.BudgetViewModel
+import com.buddy.budget.i18n.tr
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLanguage.load(this)
         enableEdgeToEdge()
         setContent {
             BuddyTheme {
@@ -41,13 +44,13 @@ class MainActivity : ComponentActivity() {
                                 selected = selectedScreen == 0,
                                 onClick = { selectedScreen = 0 },
                                 icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null) },
-                                label = { Text("Budget") }
+                                label = { Text(tr("Budget")) }
                             )
                             NavigationBarItem(
                                 selected = selectedScreen == 1,
                                 onClick = { selectedScreen = 1 },
                                 icon = { Icon(Icons.Default.ShowChart, contentDescription = null) },
-                                label = { Text("Portfolio") }
+                                label = { Text(tr("Portfolio")) }
                             )
                         }
                     }

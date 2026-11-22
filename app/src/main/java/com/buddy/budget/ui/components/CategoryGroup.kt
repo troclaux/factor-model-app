@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.text.NumberFormat
 import java.util.Locale
+import com.buddy.budget.i18n.tr
 
 @Composable
 fun CategoryGroup(
@@ -69,7 +70,7 @@ fun CategoryGroup(
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        contentDescription = tr(if (expanded) "Collapse" else "Expand"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

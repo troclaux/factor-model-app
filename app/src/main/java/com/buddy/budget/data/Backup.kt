@@ -6,6 +6,7 @@ import com.buddy.budget.model.HistoryEntry
 import com.buddy.budget.portfolio.model.PortfolioSettings
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
+import com.buddy.budget.i18n.tr
 
 /**
  * Everything worth keeping, in one JSON file: budget defaults, saved months, this month's plan and the
@@ -29,7 +30,7 @@ data class Backup(
         /** Throws when the file is not a Buddy backup. */
         fun fromJson(json: String): Backup {
             val backup = runCatching { gson.fromJson(json, Backup::class.java) }.getOrNull()
-            require(backup != null && backup.app == APP) { "This file is not a Buddy backup." }
+            require(backup != null && backup.app == APP) { tr("This file is not a Buddy backup.") }
             return backup
         }
     }

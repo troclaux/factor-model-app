@@ -80,6 +80,7 @@ import com.buddy.budget.ui.BackupMenu
 import com.buddy.budget.portfolio.model.parseNumber
 import java.time.Instant
 import java.time.ZoneOffset
+import com.buddy.budget.i18n.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +103,7 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Portfolio") },
+                    title = { Text(tr("Portfolio")) },
                     actions = { BackupMenu(tint = MaterialTheme.colorScheme.onPrimary) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -110,8 +111,8 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                     )
                 )
                 PrimaryTabRow(selectedTabIndex = viewModel.selectedTab) {
-                    Tab(selected = viewModel.selectedTab == 0, onClick = { viewModel.selectedTab = 0 }, text = { Text("Setup") })
-                    Tab(selected = viewModel.selectedTab == 1, onClick = { viewModel.selectedTab = 1 }, text = { Text("Results") })
+                    Tab(selected = viewModel.selectedTab == 0, onClick = { viewModel.selectedTab = 0 }, text = { Text(tr("Setup")) })
+                    Tab(selected = viewModel.selectedTab == 1, onClick = { viewModel.selectedTab = 1 }, text = { Text(tr("Results")) })
                 }
             }
         },
@@ -127,11 +128,11 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                         if (viewModel.loading) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(12.dp))
-                            Text("Fetching prices…")
+                            Text(tr("Fetching prices…"))
                         } else {
                             Icon(Icons.Default.QueryStats, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Analyze")
+                            Text(tr("Analyze"))
                         }
                     }
                 }
@@ -167,7 +168,7 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            SectionCard("Assets") {
+            SectionCard(tr("Assets")) {
                 var tickerText by rememberSaveable { mutableStateOf("") }
                 val addTicker = {
                     viewModel.addTickers(tickerText)
@@ -176,15 +177,15 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                 OutlinedTextField(
                     value = tickerText,
                     onValueChange = { tickerText = it },
-                    label = { Text("Add tickers") },
+                    label = { Text(tr("Add tickers")) },
                     placeholder = { Text("PETR4.SA, AAPL…") },
-                    supportingText = { Text("B3 tickers need the .SA suffix") },
+                    supportingText = { Text(tr("B3 tickers need the .SA suffix")) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { addTicker() }),
                     trailingIcon = {
                         IconButton(onClick = addTicker, enabled = tickerText.isNotBlank()) {
-                            Icon(Icons.Default.Add, contentDescription = "Add")
+                            Icon(Icons.Default.Add, contentDescription = tr("Add"))
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -195,15 +196,15 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                             selected = false,
                             onClick = { viewModel.removeTicker(ticker) },
                             label = { Text(ticker) },
-                            trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $ticker", Modifier.size(16.dp)) },
+                            trailingIcon = { Icon(Icons.Default.Close, contentDescription = tr("Remove %s").format(ticker), Modifier.size(16.dp)) },
                         )
                     }
                 }
                 OutlinedTextField(
                     value = settings.marketProxy,
                     onValueChange = { value -> viewModel.update { it.copy(marketProxy = value) } },
-                    label = { Text("Market benchmark") },
-                    supportingText = { Text("Used for market betas, e.g. ^BVSP or SPY. Leave blank to skip.") },
+                    label = { Text(tr("Market benchmark")) },
+                    supportingText = { Text(tr("Used for market betas, e.g. ^BVSP or SPY. Leave blank to skip.")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -211,11 +212,11 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
         }
 
         item {
-            SectionCard("Parameters") {
+            SectionCard(tr("Parameters")) {
                 OutlinedTextField(
                     value = settings.riskFreePercent,
                     onValueChange = { value -> viewModel.update { it.copy(riskFreePercent = value) } },
-                    label = { Text("Risk-free rate (annual)") },
+                    label = { Text(tr("Risk-free rate (annual)")) },
                     suffix = { Text("%") },
                     isError = settings.riskFreeProxy.isBlank() && parseNumber(settings.riskFreePercent) == null,
                     enabled = settings.riskFreeProxy.isBlank(),
@@ -226,8 +227,8 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                 OutlinedTextField(
                     value = settings.riskFreeProxy,
                     onValueChange = { value -> viewModel.update { it.copy(riskFreeProxy = value) } },
-                    label = { Text("Risk-free proxy") },
-                    supportingText = { Text("CDI or SELIC (Banco Central), or a Yahoo yield ticker such as ^IRX. Overrides the rate above.") },
+                    label = { Text(tr("Risk-free proxy")) },
+                    supportingText = { Text(tr("CDI or SELIC (Banco Central), or a Yahoo yield ticker such as ^IRX. Overrides the rate above.")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -240,7 +241,7 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                         )
                     }
                 }
-                Text("Period", style = MaterialTheme.typography.labelLarge)
+                Text(tr("Period"), style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(PeriodMode.entries, settings.periodMode, { it.label }) { mode ->
                     viewModel.update { it.copy(periodMode = mode) }
                 }
@@ -248,8 +249,8 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                     OutlinedTextField(
                         value = settings.lookbackAmount,
                         onValueChange = { value -> viewModel.update { it.copy(lookbackAmount = value) } },
-                        label = { Text("Lookback") },
-                        supportingText = { Text("Ends on the last trading day of the previous month") },
+                        label = { Text(tr("Lookback")) },
+                        supportingText = { Text(tr("Ends on the last trading day of the previous month")) },
                         isError = (parseNumber(settings.lookbackAmount) ?: 0.0) <= 0.0,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -259,12 +260,12 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                         viewModel.update { it.copy(lookbackUnit = unit) }
                     }
                 } else {
-                    DateField("Start date", settings.startDate) { date -> viewModel.update { it.copy(startDate = date) } }
+                    DateField(tr("Start date"), settings.startDate) { date -> viewModel.update { it.copy(startDate = date) } }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("End at latest available", style = MaterialTheme.typography.bodyLarge)
+                            Text(tr("End at latest available"), style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                "Use the most recent close",
+                                tr("Use the most recent close"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -272,25 +273,25 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
                         Switch(checked = settings.endLatest, onCheckedChange = { value -> viewModel.update { it.copy(endLatest = value) } })
                     }
                     if (!settings.endLatest) {
-                        DateField("End date", settings.endDate) { date -> viewModel.update { it.copy(endDate = date) } }
+                        DateField(tr("End date"), settings.endDate) { date -> viewModel.update { it.copy(endDate = date) } }
                     }
                 }
-                Text("Return frequency", style = MaterialTheme.typography.labelLarge)
+                Text(tr("Return frequency"), style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(Frequency.entries, settings.frequency, { it.label }) { frequency ->
                     viewModel.update { it.copy(frequency = frequency) }
                 }
                 if (settings.frequency == Frequency.MONTHLY && settings.periodMode == PeriodMode.LOOKBACK && settings.lookbackUnit != LookbackUnit.YEARS) {
                     Text(
-                        "Short windows give few monthly returns. Daily is usually better here.",
+                        tr("Short windows give few monthly returns. Daily is usually better here."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Allow short selling", style = MaterialTheme.typography.bodyLarge)
+                        Text(tr("Allow short selling"), style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "Off constrains every weight to be ≥ 0",
+                            tr("Off constrains every weight to be ≥ 0"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -304,7 +305,7 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
 
         item {
             PortfolioInputCard(
-                title = "My portfolio",
+                title = tr("My portfolio"),
                 tickers = settings.tickers,
                 input = settings.current,
                 onChange = { input -> viewModel.update { it.copy(current = input) } },
@@ -314,7 +315,7 @@ private fun SetupContent(viewModel: PortfolioViewModel, modifier: Modifier) {
 
         item {
             PortfolioInputCard(
-                title = "Hypothetical portfolio",
+                title = tr("Hypothetical portfolio"),
                 tickers = settings.tickers,
                 input = settings.hypothetical,
                 onChange = { input -> viewModel.update { it.copy(hypothetical = input) } },
@@ -352,7 +353,7 @@ private fun DateField(label: String, value: String, onChange: (String) -> Unit) 
         onValueChange = {},
         readOnly = true,
         label = { Text(label) },
-        placeholder = { Text("Tap to pick a date") },
+        placeholder = { Text(tr("Tap to pick a date")) },
         isError = parseDate(value) == null,
         trailingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
         singleLine = true,
@@ -371,14 +372,14 @@ private fun DateField(label: String, value: String, onChange: (String) -> Unit) 
                     picking = false
                 }) { Text("OK") }
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(tr("Cancel")) } },
         ) {
             DatePicker(state)
         }
     }
 }
 
-/** Pluggy credentials and the import button that fills "My portfolio" from Open Finance. */
+/** Pluggy credentials and the import button that fills tr("My portfolio") from Open Finance. */
 @Composable
 private fun OpenFinanceCard(viewModel: PortfolioViewModel) {
     val settings = viewModel.settings
@@ -389,9 +390,9 @@ private fun OpenFinanceCard(viewModel: PortfolioViewModel) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth().clickable { expanded = !expanded }, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Open Finance (Pluggy)", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Open Finance (Pluggy)"), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (configured) "Ready to import your holdings" else "Not set up (optional)",
+                        tr(if (configured) "Ready to import your holdings" else "Not set up (optional)"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -401,22 +402,22 @@ private fun OpenFinanceCard(viewModel: PortfolioViewModel) {
             AnimatedVisibility(expanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Connect your broker at meu.pluggy.ai, then link MeuPluggy in the demo app at dashboard.pluggy.ai. " +
-                            "Paste that app's client ID and secret and the connection's item ID. Stored only on this phone.",
+                        tr("Connect your broker at meu.pluggy.ai, then link MeuPluggy in the demo app at dashboard.pluggy.ai. ") +
+                            tr("Paste that app's client ID and secret and the connection's item ID. Stored only on this phone."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     OutlinedTextField(
                         value = settings.pluggyClientId,
                         onValueChange = { value -> viewModel.update { it.copy(pluggyClientId = value) } },
-                        label = { Text("Client ID") },
+                        label = { Text(tr("Client ID")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = settings.pluggyClientSecret,
                         onValueChange = { value -> viewModel.update { it.copy(pluggyClientSecret = value) } },
-                        label = { Text("Client secret") },
+                        label = { Text(tr("Client secret")) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -425,8 +426,8 @@ private fun OpenFinanceCard(viewModel: PortfolioViewModel) {
                     OutlinedTextField(
                         value = settings.pluggyItemIds,
                         onValueChange = { value -> viewModel.update { it.copy(pluggyItemIds = value) } },
-                        label = { Text("Item IDs") },
-                        supportingText = { Text("One per broker connection, separated by commas") },
+                        label = { Text(tr("Item IDs")) },
+                        supportingText = { Text(tr("One per broker connection, separated by commas")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -440,13 +441,13 @@ private fun OpenFinanceCard(viewModel: PortfolioViewModel) {
                 if (viewModel.importing) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(12.dp))
-                    Text("Importing…")
+                    Text(tr("Importing…"))
                 } else {
-                    Text("Import my holdings")
+                    Text(tr("Import my holdings"))
                 }
             }
             Text(
-                "Replaces My portfolio's share counts with your stocks, FIIs, BDRs and ETFs and adds missing tickers.",
+                tr("Replaces My portfolio's share counts with your stocks, FIIs, BDRs and ETFs and adds missing tickers."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -473,7 +474,7 @@ private fun PortfolioInputCard(
                 Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (filled == 0) "Not set (optional)" else "$filled positions · ${input.mode.label.lowercase()}",
+                        if (filled == 0) tr("Not set (optional)") else tr("%d positions · %s").format(filled, input.mode.label.lowercase()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -484,8 +485,8 @@ private fun PortfolioInputCard(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ChoiceRow(InputMode.entries, input.mode, { it.label }) { onChange(input.copy(mode = it)) }
                     Row {
-                        TextButton(onClick = { pasting = true }) { Text("Paste list") }
-                        TextButton(onClick = { onChange(input.copy(values = emptyMap())) }) { Text("Clear") }
+                        TextButton(onClick = { pasting = true }) { Text(tr("Paste list")) }
+                        TextButton(onClick = { onChange(input.copy(values = emptyMap())) }) { Text(tr("Clear")) }
                     }
                     tickers.forEach { ticker ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -534,18 +535,18 @@ private fun PasteDialog(mode: InputMode, onDismiss: () -> Unit, onConfirm: (Map<
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Paste ${mode.label.lowercase()}") },
+        title = { Text(tr("Paste %s").format(mode.label.lowercase())) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 placeholder = { Text(if (mode == InputMode.SHARES) "EGIE3.SA 157\nITUB3.SA 310" else "EGIE3.SA 25\nITUB3.SA 75") },
-                supportingText = { Text("One TICKER VALUE per line · ${parsed.size} recognized") },
+                supportingText = { Text(tr("One TICKER VALUE per line · %d recognized").format(parsed.size)) },
                 minLines = 6,
                 modifier = Modifier.fillMaxWidth(),
             )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(parsed) }, enabled = parsed.isNotEmpty()) { Text("Apply") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(parsed) }, enabled = parsed.isNotEmpty()) { Text(tr("Apply")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel")) } },
     )
 }

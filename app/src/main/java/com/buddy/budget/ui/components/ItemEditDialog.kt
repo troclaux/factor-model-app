@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.buddy.budget.model.Category
 import com.buddy.budget.model.DraftItem
+import com.buddy.budget.i18n.tr
 
 /** Whether the dialog edits this month's item or creates a new recurring one. */
 enum class ItemDialogMode { EDIT, CREATE }
@@ -51,7 +52,7 @@ fun ItemEditDialog(
     /** The edited item and the edited default amount (null when the item has none). */
     onSave: (DraftItem, String?) -> Unit,
     onRemove: (() -> Unit)?,
-    removeLabel: String = "Remove",
+    removeLabel: String = tr("Remove"),
 ) {
     var name by remember { mutableStateOf(item.name) }
     var amount by remember { mutableStateOf(item.amount) }
@@ -62,8 +63,8 @@ fun ItemEditDialog(
     val parsedDay = day.trim().toIntOrNull()
     val dayValid = day.isBlank() || parsedDay in 1..31
     val nameError = when {
-        name.isBlank() -> "Enter a name"
-        name.trim() != item.name && isNameTaken(name) -> "Another item already has this name"
+        name.isBlank() -> tr("Enter a name")
+        name.trim() != item.name && isNameTaken(name) -> tr("Another item already has this name")
         else -> null
     }
 
@@ -75,31 +76,31 @@ fun ItemEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
+                    label = { Text(tr("Name")) },
                     isError = nameError != null,
                     supportingText = nameError?.let { { Text(it) } },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (categories != null) CategoryPicker(category, categories) { category = it }
-                AmountField(if (defaultValue != null) "This month" else "Amount", amount) { amount = it }
-                defaultValue?.let { value -> AmountField("Default", value) { defaultValue = it } }
+                AmountField(tr(if (defaultValue != null) "This month" else "Amount"), amount) { amount = it }
+                defaultValue?.let { value -> AmountField(tr("Default"), value) { defaultValue = it } }
                 OutlinedTextField(
                     value = if (isFatura) "" else day,
                     onValueChange = { day = it },
-                    label = { Text("Day of the month") },
-                    placeholder = { Text(if (isFatura) "Paid on the fatura day" else "Blank if it varies") },
+                    label = { Text(tr("Day of the month")) },
+                    placeholder = { Text(tr(if (isFatura) "Paid on the fatura day" else "Blank if it varies")) },
                     enabled = !isFatura,
                     isError = !isFatura && !dayValid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                SwitchRow("On the credit card (fatura)", isFatura) { isFatura = it }
+                SwitchRow(tr("On the credit card (fatura)"), isFatura) { isFatura = it }
                 val note = when {
-                    mode == ItemDialogMode.CREATE -> "Added to your defaults and to this month."
-                    defaultValue == null -> "Only for this month."
-                    else -> "\"This month\" applies to this month only. Name, category, default, day and fatura are saved to your defaults."
+                    mode == ItemDialogMode.CREATE -> tr("Added to your defaults and to this month.")
+                    defaultValue == null -> tr("Only for this month.")
+                    else -> tr("\"This month\" applies to this month only. Name, category, default, day and fatura are saved to your defaults.")
                 }
                 Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -119,12 +120,12 @@ fun ItemEditDialog(
                         defaultValue,
                     )
                 },
-            ) { Text(if (mode == ItemDialogMode.CREATE) "Add" else "Save") }
+            ) { Text(tr(if (mode == ItemDialogMode.CREATE) "Add" else "Save")) }
         },
         dismissButton = {
             Row {
                 if (onRemove != null) TextButton(onClick = onRemove) { Text(removeLabel, color = MaterialTheme.colorScheme.error) }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(tr("Cancel")) }
             }
         },
     )
@@ -148,7 +149,7 @@ private fun AmountField(label: String, value: String, onChange: (String) -> Unit
 private fun CategoryPicker(selected: String, choices: List<Category>, onSelect: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text("Category: ${Category.label(selected)}") }
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) { Text(tr("Category: %s").format(Category.label(selected))) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             choices.forEach { category ->
                 DropdownMenuItem(

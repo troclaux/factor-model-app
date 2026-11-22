@@ -20,6 +20,7 @@ import com.buddy.budget.ui.theme.Green700
 import com.buddy.budget.ui.theme.Red700
 import java.text.NumberFormat
 import java.util.Locale
+import com.buddy.budget.i18n.tr
 
 /** budget.py's summary: net salary + leftover + inflows − outflows = free to spend (or deficit). */
 @Composable
@@ -30,7 +31,7 @@ fun BalanceSummary(
     val fmt = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
     val isPositive = report.balance >= 0
     val balanceColor = if (isPositive) Green700 else Red700
-    val label = if (isPositive) "FREE TO SPEND" else "DEFICIT"
+    val label = tr(if (isPositive) "FREE TO SPEND" else "DEFICIT")
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -41,14 +42,14 @@ fun BalanceSummary(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            SummaryRow("Net salary", fmt.format(report.month.salary))
+            SummaryRow(tr("Net salary"), fmt.format(report.month.salary))
             if (report.month.leftover != 0.0) {
-                SummaryRow("Leftover", "+ ${fmt.format(report.month.leftover)}")
+                SummaryRow(tr("Leftover"), "+ ${fmt.format(report.month.leftover)}")
             }
             if (report.totalInflow != 0.0) {
-                SummaryRow("Inflows", "+ ${fmt.format(report.totalInflow)}")
+                SummaryRow(tr("Inflows"), "+ ${fmt.format(report.totalInflow)}")
             }
-            SummaryRow("Outflows", "- ${fmt.format(report.totalOutflow)}")
+            SummaryRow(tr("Outflows"), "- ${fmt.format(report.totalOutflow)}")
 
             // Balance — the main number
             Row(
